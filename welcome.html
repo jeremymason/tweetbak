@@ -1,28 +1,27 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE html>
+<html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
-	<title>Blisst.org</title>
+	<title>Tweetbak</title>
 	<link rel="stylesheet" href="static/css/style.css" type="text/css" />
-	<link rel="stylesheet" href="static/css/blisst.css" type="text/css" />
-	<script type="application/javascript" src="/static/js/jquery-1.4.2.min.js"></script>
-	<script type="application/javascript" src="/static/js/blisst.js"></script>
+	<script type="application/javascript" src="/static/js/jquery-1.4.4.min.js"></script>
+	<script type="application/javascript" src="/static/js/scripts.js"></script>
 </head>
 <body>
 <div id="wrap">
 	<div id="header">
-		<h1>Blisst.org</h1>
-		<h2>Your list management software</h2>
+		<h1>Tweetbak</h1>
+		<h2>Backup your tweet stream</h2>
 		<a href="{{ url }}">{{ url_linktext }} {{ user.email }}</a>
 	</div>
 
 	<div id="content">
-		Welcome to Blisst. Please <a href="{{ login_url }}">login</a>
+		Welcome to tweetbak. Please <a href="{{ login_url }}">login</a>
 		<div class="clear"></div>
 	</div>
 	
 	<div id="footer">
-		<p>&copy; {{ year }} Blisst.org</p>
+		<p>&copy; {{ year }} tweetbak</p>
 	</div>
 </div>
 
