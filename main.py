@@ -23,26 +23,22 @@ class Welcome(webapp.RequestHandler):
             self.redirect("/tweets", False)
         login_url = users.create_login_url(self.request.uri)
         self.response.out.write(template.render('welcome.html', {'login_url':login_url}))
-        
+
 
 class Tweets(webapp.RequestHandler):
 
     def get(self):
+        if not users.get_current_user():
+            self.redirect("/")
+
         q = Tweets.all().order('date')
         tweets = q.fetch(10)
-
-        if users.get_current_user():
-            url = users.create_logout_url(self.request.uri)
-            url_linktext = 'Logout'
-        else:
-            url = users.create_login_url(self.request.uri)
-            url_linktext = 'Login'
 
         template_values = {
             'tweets': tweets,
             'user': users.get_current_user(),
-            'url': url,
-            'url_linktext': url_linktext,
+            'url': users.create_logout_url(self.request.uri),
+            'url_linktext': 'Logout',
             'request': self.request,
             'year': datetime.datetime.now().year
             }
@@ -56,6 +52,21 @@ class Tweets(webapp.RequestHandler):
         tweet.put()
         self.redirect('/tweets')
 
+class Configure(webapp.RequestHandler):
+    
+    def get(self):
+        if not users.get_current_user():
+            self.redirect("/")
+
+        template_values = {
+            'user': users.get_current_user(),
+            'url': users.create_logout_url(self.request.uri),
+            'url_linktext': 'Logout',
+            'request': self.request,
+            'year': datetime.datetime.now().year
+            }
+            #TODO: create configure page
+        self.response.out.write(template.render('configure.html', template_values))
 
 application = webapp.WSGIApplication(
                                      [
