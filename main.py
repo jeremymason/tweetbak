@@ -2,7 +2,7 @@ import datetime
 import cgi
 import os
 
-from django.utils import simplejson
+import simplejson
 from google.appengine.ext.webapp import template
 from google.appengine.api import users
 from google.appengine.ext import webapp
@@ -11,6 +11,12 @@ from google.appengine.ext import db
 
 # == models =======================================================
 class Tweet(db.Model):
+    content = db.StringProperty(required = True)
+    owner = db.UserProperty(required = True)
+    date = db.DateTimeProperty(auto_now_add=True)
+
+
+class TwitterConfig(db.Model):
     content = db.StringProperty(required = True)
     owner = db.UserProperty(required = True)
     date = db.DateTimeProperty(auto_now_add=True)
