@@ -1,0 +1,71 @@
+import datetime
+import cgi
+import os
+
+from django.utils import simplejson
+from google.appengine.ext.webapp import template
+from google.appengine.api import users
+from google.appengine.ext import webapp
+from google.appengine.ext.webapp.util import run_wsgi_app
+from google.appengine.ext import db
+
+# == models =======================================================
+class Tweet(db.Model):
+    content = db.StringProperty(required = True)
+    owner = db.UserProperty(required = True)
+    date = db.DateTimeProperty(auto_now_add=True)
+
+# == controllers =================================================
+class Welcome(webapp.RequestHandler):
+
+    def get(self):
+        if users.get_current_user():
+            self.redirect("/tweets", False)
+        login_url = users.create_login_url(self.request.uri)
+        self.response.out.write(template.render('welcome.html', {'login_url':login_url}))
+        
+
+class Tweets(webapp.RequestHandler):
+
+    def get(self):
+        q = Tweets.all().order('date')
+        tweets = q.fetch(10)
+
+        if users.get_current_user():
+            url = users.create_logout_url(self.request.uri)
+            url_linktext = 'Logout'
+        else:
+            url = users.create_login_url(self.request.uri)
+            url_linktext = 'Login'
+
+        template_values = {
+            'tweets': tweets,
+            'user': users.get_current_user(),
+            'url': url,
+            'url_linktext': url_linktext,
+            'request': self.request,
+            'year': datetime.datetime.now().year
+            }
+
+        self.response.out.write(template.render('index.html', template_values))
+
+    def post(self):
+        tweet = Tweet(content = self.request.get('content'),
+            owner = users.get_current_user(),
+            )
+        tweet.put()
+        self.redirect('/tweets')
+
+
+application = webapp.WSGIApplication(
+                                     [
+                                     ('/', Welcome),
+                                     ('/tweets', Tweets)
+                                     ],
+                                     debug=True)
+def main():
+    run_wsgi_app(application)
+
+if __name__ == "__main__":
+    main()
+

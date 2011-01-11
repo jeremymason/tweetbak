@@ -1,0 +1,70 @@
+#categories {
+
+}
+#categories tr td {
+    padding: 5px;
+}
+#categories tr td +td {
+    padding-left:5px;
+    margin: 5px;
+}
+#categories tr td +td a{
+    text-decoration: none;
+    background: url(/static/images/close_16.png) 0 50% no-repeat;
+    margin: 5px;
+    padding: 2px;
+    padding-left: 16px;
+    color: #af5056;
+}
+#categories tr td +td a:hover{
+    border:solid 1px #af5056;
+    padding: 0 0 0 15px;
+}
+
+fieldset {      
+ position: relative;      
+ float: left;      
+ clear: both;      
+ width: 19em;      
+ margin: 0 0 -1em 0;      
+ padding: 0 0 1em 0;      
+ border-style: none;      
+ }
+
+ fieldset ol {      
+ padding: 1em 1em 0 1em;      
+ list-style: none;     
+ }
+
+ fieldset li {   
+ padding-bottom: 1em;  
+ padding-right: 0.3em;
+ float: left;
+ }  
+
+ legend {      
+ margin-left: 1em;     
+ padding: 0;      
+ color: #545351;      
+ }
+
+ legend a {      
+ position: absolute;      
+ left: 0.74em;      
+ top: 0;      
+ margin-top: 0.5em;
+ background: url(/static/images/add.png) 0 50%;
+ background-repeat:no-repeat;
+ padding-left: 16px;
+ }
+
+ label {    
+ display: block;
+ font-size: 80%;
+ }
+
+ ol#hiddenform {
+     border: solid 1px #e3e3e3;
+ }
+
+ html { font-family: helvetica;}

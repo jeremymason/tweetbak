@@ -1,0 +1,125 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+	<title>Blisst.org</title>
+	<link rel="stylesheet" href="static/css/style.css" type="text/css" />
+	<link rel="stylesheet" href="static/css/blisst.css" type="text/css" />
+	<script type="application/javascript" src="/static/js/jquery-1.4.2.min.js"></script>
+	<script type="application/javascript" src="/static/js/blisst.js"></script>
+</head>
+<body>
+<div id="wrap">
+	<div id="header">
+		<h1>Blisst.org</h1>
+		<h2>Your list management software</h2>
+		<a href="{{ url }}">{{ url_linktext }} {{ user.email }}</a>
+	</div>
+
+	<div id="content">
+		{% if current_list.key %}
+		<div id="topbar">
+			<ul>
+				<li><a href="/list?{{ current_list.key }}" class="selected">List</a></li>
+				<li><a href="/properties?{{ current_list.key }}">Properties</a></li>
+				<li><a class="delete" href="/list?{{ current_list.key }}">Delete</a></li>
+			</ul>
+		</div>
+		{% endif %}
+		<div id="sidebar">
+			<ul>
+				{% for list in lists %}
+				<li><a href="/list?{{ list.key }}" 
+					{% ifequal list.key current_list.key %} 
+					class="selected" 
+					{% endifequal %}
+					data-remove="task_{{ list.key }}">{{ list.title }}</a></li>
+				{% endfor %}
+			</ul>
+            <form action="/list" method="post">
+              <div><input type="text" name="name" style="width:165px;float:left;margin-right:2px;height:11px" /><button class="button" type="submit">
+                <img src="/static/images/tick.png" alt="Save" /> Add
+              </button></div>
+            </form>
+		</div>
+		<div id="page">
+			{% if current_list.key %}
+			{% if current_list.items %}
+			{{ current_list.items|length }}
+			<table>
+				<tr>
+					<th>Needed</th>
+					<th>Category</th>
+					<th>Product</th>
+					<th>Qty</th>
+					<th>Alternative</th>
+					<th>Qty</th>
+					<th>Notes</th>
+					<th>Action</th>
+				</tr>
+				{% if current_list %}
+				{% for item in current_list.items %}
+				<tr>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td><button class="button" type="submit">
+		                <img src="/static/images/tick.png" alt="Delete" /> Delete
+		              </button></td>
+				</tr>
+				{% endfor %}
+				{% endif %}
+			</table>
+			{% endif %}
+
+		    <div style="width:12em;">
+		        <form action="/item" method="post">
+				<input type="hidden" name="listkey" value="{{ current_list.key() }}">
+		    <fieldset id="add_new_item" class="">
+		        <legend><a href="#">Add new item</a></legend>
+		        <ol id="hiddenform" style="display: none">
+		            <li>
+		                <label for="product">Product</label>
+		                <input class="text" size="30" type="text" name="product" id="product">
+		            </li>
+		            <li>
+		                <label for="qty">Qty</label>
+		                <input class="text" size="1" type="text" name="qty" id="qty">
+		            </li>
+		            <br clear="all">
+		            <li>
+		                <label for="alternate">Alternate</label>
+		                <input class="text" size="30" type="text" name="alternate" id="alternate">
+		            </li>
+		            <li>
+		                <label for="alt_qty">Qty</label>
+		                <input class="text" size="1" type="text" name="alt_qty" id="alt_qty">
+		            </li>
+		            <br clear="all">
+		            <li>
+		                <label for="notes">Notes</label>
+		                <textarea id='notes' name="notes" style="width:19em;" rows="4"></textarea>
+		            </li>
+					<li><button class="button" type="submit"><img src="/static/images/tick.png" alt="Add" /> Add</button>
+					</li>
+		            <br clear="all">
+		        </ol>
+		    </fieldset>
+		    <br clear="all">
+		    </form>    
+		    </div>
+		</div>
+		<div class="clear"></div>
+	</div>
+	
+	<div id="footer">
+		<p>&copy; {{ year }} Blisst.org</p>
+	</div>
+</div>
+
+</body>
+</html>

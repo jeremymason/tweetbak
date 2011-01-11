@@ -1,0 +1,284 @@
+/*
+	global
+*/
+* {
+	padding:0;
+	margin:0;
+}
+body {
+	font-family:Helvetica;
+	font-size:1.0em;
+	background-color:#fff;
+	margin:0 auto;
+	padding:50px;
+	height:100%;
+}
+
+/*
+	structure 
+*/
+div#header {
+    color: #3687C9;
+	height:149px;
+}
+div#content {
+}
+div#page {
+	background-color:#ffffff;
+	width:70%;
+	float:left;
+	border-left:solid 1px grey;
+	border-top: solid 1px grey;
+    min-height: 250px;
+    padding: 10px;
+}
+
+div#topbar {
+	margin-left:27%;
+	position:relative;
+	top: -3px;
+	right: -18px;
+}
+div#topbar ul {
+	display: inline;
+	list-style:none;
+	margin:0;
+	padding:0;
+}
+div#topbar ul li {
+	display: inline;
+	list-style: none;
+	border: solid 1px grey;
+}
+div#topbar ul li a {
+	background-color:#9f9f9f;
+	color:#565656;
+	padding: 3px 10px;
+	text-decoration:none;
+}
+div#topbar ul li a:hover {
+	background-color:#e8e8e8;
+	color:#ae0000;
+}
+div#topbar ul li a.selected, div#topbar ul li a.selected:hover {
+	background-color:#ffffff;
+	border-bottom: solid 1px white;
+	border-right:none;
+	font-weight:bold;
+	color:#363DC9;
+}
+
+
+
+div#sidebar {
+	width:27%;
+	float:left;
+	margin-top:15px;
+	position:relative;
+	left: 1px;
+}
+div#sidebar ul {
+	list-style:none;
+	margin:0;
+	padding:0;
+}
+div#sidebar ul li {
+}
+div#sidebar ul li a {
+	background-color:#9f9f9f;
+	color:#565656;
+	border:1px solid grey;
+	display:block;
+	padding:5px 5px;
+	text-decoration:none;
+}
+div#sidebar ul li a:hover {
+	background-color:#e8e8e8;
+	color:#ae0000;
+}
+div#sidebar ul li a.selected, div#sidebar ul li a.selected:hover {
+	background-color:#ffffff;
+	border-right:none;
+	font-weight:bold;
+	color:#363DC9;
+}
+
+
+
+
+/*
+	headers
+*/
+h1 {
+	font-size:2.8em;
+	font-family:Georgia, "Times New Roman", Times, serif;
+	font-weight:normal;
+	line-height:150%;
+}
+h2 {
+	font-weight:normal;
+	padding:0;
+	margin:-10px 0 0 0;
+}
+
+h3 {
+	font-size:1.4em;
+	font-weight:normal;
+}
+
+
+
+/*
+	links
+*/
+a {
+	color:#910000;
+}
+a:hover {
+	color:#880000;
+}
+
+
+/* paragraphs */
+p {
+	font-size:90%;
+	line-height:150%;
+	padding-bottom:15px;
+}
+
+
+
+/* footer */
+div#footer {
+	padding: 10px 0;
+}
+div#footer p {
+	text-align:right;
+	margin:0;
+	padding:0;
+	color:#a4a4a4;
+}
+div#footer p, div#footer a {
+	font-family:Arial, Helvetica, sans-serif;
+	color:#a4a4a4;
+}
+
+
+
+/* forms, labels, inputs */
+input.button {
+	font-weight:bold;
+	padding:5px 15px;
+}
+input, textarea {
+	padding:5px;
+	background-color:#ffffff;
+	border:1px solid #dddddd;
+}
+label {
+	font-weight:bold;
+}
+form input.formbutton {
+	background-color:#950303;
+	color:#FFFFFF;
+	font-weight:bold;
+	padding:5px 10px;
+}
+
+
+
+/** tables */
+table {
+	width:100%;
+	font-size:75%;
+}
+table tr th {
+	color:#ffffff;
+	background-color:#333333;
+}
+table tr th, table tr td {
+	padding:5px 10px;
+	text-align:left;
+}
+table tr td {
+	border-bottom:1px solid #dddddd;
+}
+
+
+
+/** lists */
+div.sidebar ul {
+	list-style:none;
+	padding:0;
+	border-top:4px solid #dddddd;
+	margin:0 0 20px 0
+}
+ul {
+	margin:0 0 20px 20px;
+	padding:0;
+}
+ul li {
+	padding:3px 0;
+}
+
+
+
+.clear {
+	clear:both; 
+}
+.right { 
+	float:right; 
+}
+.left  {
+	float:left;  
+}
+*:focus {
+	outline:none;
+}
+
+/*  Inspired by http://particletree.com/features/rediscovering-the-button-element */
+
+a.button:link, a.button:visited, a.button:hover, a.button:active, button.button {
+  color: #222;
+  display:block;
+  float:left;
+  margin:0 1px 0 0;
+  background-color: #eee;
+  border:1px solid #bfbfbf;
+  font-size: 0.8em;
+  line-height: 1.0em;
+  font-weight:bold;
+  cursor:pointer;
+  padding:2px 5px 2px 5px;
+  text-decoration: none;
+}
+
+button.button {
+  width:auto;
+  overflow:visible;
+  padding:2px 5px; /* IE6 */
+}
+button.button[type] {
+  padding:2px 5px; /* Firefox */
+  line-height:17px; /* Safari */
+}
+
+*:first-child+html button.button[type] {
+  padding:2px 5px; /* IE7 */
+}
+
+button.button img, a.button img {
+  margin:0 3px -3px 0 !important;
+  padding:0;
+  border:none;
+  width:16px;
+  height:16px;
+}
+
+button.button:hover, a.button:hover {
+  background-color:#dedede;
+}
+
+button.button:active, a.button:active {
+  background-color:#e5e5e5;
+}
