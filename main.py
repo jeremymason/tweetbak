@@ -11,13 +11,21 @@ import datetime
 import cgi
 import os
 
-import simplejson
+import tweepy
 
 from google.appengine.ext.webapp import template
 from google.appengine.api import users
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.ext import db
+
+# Non source control configuration is in localsettings
+from localsettings import *
+
+# -- Constants -----------------------------------------------------------
+REQUEST_TOKEN_URL = "https://api.twitter.com/oauth/request_token"
+ACCESS_TOKEN_URL = "https://api.twitter.com/oauth/access_token"
+AUTHORIZE_URL = "https://api.twitter.com/oauth/authorize"
 
 
 # -- Models --------------------------------------------------------------
@@ -30,26 +38,6 @@ class Tweet(db.Model):
 
 
 # -- Twitter db entries --------------------------------------------------
-# -- https://github.com/tav/tweetapp
-class OAuthRequestToken(db.Model):
-    """OAuth Request Token."""
-
-    service = db.StringProperty()
-    oauth_token = db.StringProperty()
-    oauth_token_secret = db.StringProperty()
-    created = db.DateTimeProperty(auto_now_add=True)
-    owner = db.UserProperty(required = True)
-
-
-class OAuthAccessToken(db.Model):
-    """OAuth Access Token."""
-
-    service = db.StringProperty()
-    specifier = db.StringProperty()
-    oauth_token = db.StringProperty()
-    oauth_token_secret = db.StringProperty()
-    created = db.DateTimeProperty(auto_now_add=True)
-    owner = db.UserProperty(required = True)
 
 
 # -- Controllers ---------------------------------------------------------
@@ -76,7 +64,7 @@ class Tweets(webapp.RequestHandler):
         if not users.get_current_user():
             self.redirect("/")
 
-        tweets = Tweets.all().order('date').fetch(10)
+        tweets = Tweet.all().order('date').fetch(10)
 
         kwargs = {
             'tweets': tweets,
@@ -106,9 +94,18 @@ class Configure(webapp.RequestHandler):
     
     def get(self):
 
+        session = appengine_utilities.sessions.Session()
+
         if not users.get_current_user():
             self.redirect("/")
 
+        auth = tweepy.OAuthHandler(
+            TWEETBAK_CONSUMER_KEY, 
+            TWEETBAK_CONSUMER_SECRET)
+
+        redirect_url = auth.get_authorization_url()
+        
+        
         kwargs = {
             'user': users.get_current_user(),
             'url': users.create_logout_url(self.request.uri),
