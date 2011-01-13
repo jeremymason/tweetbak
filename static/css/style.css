@@ -25,19 +25,11 @@ div#content {
 }
 div#page {
 	background-color:#ffffff;
-	width:70%;
-	float:left;
-	border-left:solid 1px grey;
-	border-top: solid 1px grey;
     min-height: 250px;
     padding: 10px;
 }
 
 div#topbar {
-	margin-left:27%;
-	position:relative;
-	top: -3px;
-	right: -18px;
 }
 div#topbar ul {
 	display: inline;
@@ -48,11 +40,11 @@ div#topbar ul {
 div#topbar ul li {
 	display: inline;
 	list-style: none;
-	border: solid 1px grey;
+	border: solid 1px green;
 }
 div#topbar ul li a {
-	background-color:#9f9f9f;
-	color:#565656;
+	background-color:#f4de9f;
+	color:#878787;
 	padding: 3px 10px;
 	text-decoration:none;
 }
@@ -67,43 +59,6 @@ div#topbar ul li a.selected, div#topbar ul li a.selected:hover {
 	font-weight:bold;
 	color:#363DC9;
 }
-
-
-
-div#sidebar {
-	width:27%;
-	float:left;
-	margin-top:15px;
-	position:relative;
-	left: 1px;
-}
-div#sidebar ul {
-	list-style:none;
-	margin:0;
-	padding:0;
-}
-div#sidebar ul li {
-}
-div#sidebar ul li a {
-	background-color:#9f9f9f;
-	color:#565656;
-	border:1px solid grey;
-	display:block;
-	padding:5px 5px;
-	text-decoration:none;
-}
-div#sidebar ul li a:hover {
-	background-color:#e8e8e8;
-	color:#ae0000;
-}
-div#sidebar ul li a.selected, div#sidebar ul li a.selected:hover {
-	background-color:#ffffff;
-	border-right:none;
-	font-weight:bold;
-	color:#363DC9;
-}
-
-
 
 
 /*
@@ -159,7 +114,6 @@ div#footer p {
 	color:#a4a4a4;
 }
 div#footer p, div#footer a {
-	font-family:Arial, Helvetica, sans-serif;
 	color:#a4a4a4;
 }
 
@@ -222,19 +176,6 @@ ul li {
 }
 
 
-
-.clear {
-	clear:both; 
-}
-.right { 
-	float:right; 
-}
-.left  {
-	float:left;  
-}
-*:focus {
-	outline:none;
-}
 
 /*  Inspired by http://particletree.com/features/rediscovering-the-button-element */
 
