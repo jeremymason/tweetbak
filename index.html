@@ -5,24 +5,20 @@
 	<title>Tweetbak</title>
 	<link rel="stylesheet" href="/static/css/style.css" type="text/css" />
 	<script type="application/javascript" src="/static/js/jquery-1.4.4.min.js"></script>
-	<script type="application/javascript" src="/static/js/scripts.js"></script>
+	<script type="application/javascript" src="/static/js/script.js"></script>
 </head>
 <body>
 <div id="wrap">
 	<div id="header">
 		<h1>Tweetbak</h1>
-		<h2>Your twitter backed up</h2>
+		<h2>Your twitter, backed up</h2>
+		<a href="/configure">Configure tweetbak</a>
 		<a href="{{ url }}">{{ url_linktext }} {{ user.email }}</a>
 	</div>
 
 	<div id="content">
-		<div id="topbar">
-			<ul>
-				<li><a href="/configure">Configure</a></li>
-			</ul>
-		</div>
 		<div id="page">
-			{{ tweets|length }}
+			You have {{ tweets|length }} tweet{{ tweets|pluralize }} archived.
 			<table>
 				<tr>
 					<th>Tweet</th>
@@ -31,17 +27,14 @@
 				{% for tweet in tweets %}
 				<tr>
 					<td>{{ tweet.content }}</td>
-					<td>{{ tweet.date }}</td>
+					<td width="200">{{ tweet.date|date:"D M dS, Y \a\t h:i a" }}</td>
 				</tr>
 				{% endfor %}
 			</table>
 
 		    <div>
 		        <form action="/refresh" method="post">
-		            <fieldset id="add_new_item" class="">
-		                <legend><a href="#">Refresh the backup</a></legend>
-					    <button class="button" type="submit"><img src="/static/images/tick.png" alt="Add" /> Add</button>
-					</fieldset>
+				    <button class="button" type="submit"><img src="/static/images/tick.png" alt="Add" /> Archive now!</button>
 				</form>
 		    </div>
 		</div>
