@@ -11,7 +11,9 @@ import datetime
 import cgi
 import os
 
-import tweepy
+import twitter
+from appengine_utilities import sessions
+from appengine_utilities.flash import Flash
 
 from google.appengine.ext.webapp import template
 from google.appengine.api import users
@@ -22,13 +24,20 @@ from google.appengine.ext import db
 # Non source control configuration is in localsettings
 from localsettings import *
 
-# -- Constants -----------------------------------------------------------
-REQUEST_TOKEN_URL = "https://api.twitter.com/oauth/request_token"
-ACCESS_TOKEN_URL = "https://api.twitter.com/oauth/access_token"
-AUTHORIZE_URL = "https://api.twitter.com/oauth/authorize"
-
+# -- Globals -------------------------------------------------------------
+session = sessions.Session()
 
 # -- Models --------------------------------------------------------------
+class Configuration(db.Model):
+    """Configuration items about this user"""
+
+    twitteruser = db.StringProperty(default = "")
+    lastupdated = db.DateTimeProperty(default = None)
+    lasttweetid = db.StringProperty(default = "")
+    twitter_tweetcount = db.IntegerProperty(default = 0)
+    owner = db.UserProperty(required = True)
+
+
 class Tweet(db.Model):
     """One twitter entry"""
 
@@ -55,6 +64,9 @@ class Welcome(webapp.RequestHandler):
 
         self.response.out.write(template.render('welcome.html', kwargs))
 
+def old():
+    return datetime.datetime.now()-datetime.timedelta(seconds=1)
+    return datetime.datetime.now()-datetime.timedelta(hours=1)
 
 class Tweets(webapp.RequestHandler):
     """Paginated collection of tweets"""
@@ -64,27 +76,70 @@ class Tweets(webapp.RequestHandler):
         if not users.get_current_user():
             self.redirect("/")
 
+        config = get_config()
+        if not config.lastupdated or config.lastupdated < old():
+            self.redirect("/refresh")
+
         tweets = Tweet.all().order('date').fetch(10)
 
         kwargs = {
+            'twitteruser': config.twitteruser,
             'tweets': tweets,
             'user': users.get_current_user(),
             'url': users.create_logout_url(self.request.uri),
             'url_linktext': 'Logout',
             'request': self.request,
+            'flash': Flash(),
+            'lastupdated': config.lastupdated,
             'year': datetime.datetime.now().year
             }
 
         self.response.out.write(template.render('index.html', kwargs))
 
-    def refresh(self):
 
-        tweet = Tweet(
-            content = self.request.get('content'),
-            owner = users.get_current_user(),
-            )
+class Refresh(webapp.RequestHandler):
+    """Check the twitter archive for recent posts and archive
+    if any are found"""
 
-        tweet.put()
+    def get(self):
+
+        config = get_config()
+
+        if config.lastupdated and (config.lastupdated > old()):
+
+            flash = Flash()
+            flash.msg = "Twitter stream not refreshed -- Recently done ("+str(config.lastupdated)+")"
+
+        else:
+
+            api = twitter.Api()
+            statuses = api.GetUserTimeline(config.twitteruser, count=200)
+            largestid = 0
+
+            for status in statuses:
+                tweet = Tweet(
+                    content= status.text,
+                    date= datetime.datetime.strptime(
+                        status.created_at, 
+                        '%a %b %d %H:%M:%S +0000 %Y'
+                        ),
+                    owner= user
+                    )
+
+                tweet.put()
+
+                if status.id > largestid:
+                    largestid = status.id
+
+            # upate config values
+            config.lasttweetid = largestid
+            config.lastupdated = datetime.datetime.now()
+            config.twitter_tweetcount = int(statuses[0].user.statuses_count)
+            config.put()
+            
+            # notice to the user
+            flash = Flash()
+            flash.msg = "Twitter stream refreshed"
 
         self.redirect('/tweets')
 
@@ -93,37 +148,60 @@ class Configure(webapp.RequestHandler):
     """Configure which twitter account to archive"""
     
     def get(self):
-
-        session = appengine_utilities.sessions.Session()
-
-        if not users.get_current_user():
+        user = users.get_current_user()
+        if not user:
             self.redirect("/")
 
-        auth = tweepy.OAuthHandler(
-            TWEETBAK_CONSUMER_KEY, 
-            TWEETBAK_CONSUMER_SECRET)
+        config = get_config()
 
-        redirect_url = auth.get_authorization_url()
-        
-        
         kwargs = {
-            'user': users.get_current_user(),
+            'user': user,
             'url': users.create_logout_url(self.request.uri),
             'url_linktext': 'Logout',
-            'request': self.request,
+            'twitteruser': config.twitteruser,
             'year': datetime.datetime.now().year
             }
 
-        #TODO: create configure html page
-
         self.response.out.write(
             template.render('configure.html', kwargs))
+
+    def post(self):
+        """update/save the twitter username"""
+
+        user = users.get_current_user()
+        if not user: self.redirect("/")
+
+        config = get_config()
+        config.twitteruser = self.request.get('twitteruser')
+        config.lastupdated = None
+        config.put()
+
+        flash = Flash()
+        flash.msg = "Tweetbak configuration updated, all previous tweets removed"
+
+        for t in Tweet.all().filter("owner =", user):
+            t.delete()
+
+        self.redirect("/tweets")
+        
+def get_config():
+    user = users.get_current_user()
+    if not user: return False
+
+    config = Configuration.all().filter("owner =", user).fetch(1)
+
+    if not config:
+        config =Configuration(owner=user)
+        config.put()
+    else:
+        config = config[0]
+    return config
 
 # -- The main GAE application and routes ---------------------------------
 application = webapp.WSGIApplication([
     ('/', Welcome),
     ('/tweets', Tweets),
-    ('/refresh', Tweets.refresh),
+    ('/refresh', Refresh),
     ('/configure', Configure),
     ], debug=True)
 

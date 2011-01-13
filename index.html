@@ -10,7 +10,7 @@
 <body>
 <div id="wrap">
 	<div id="header">
-		<h1>Tweetbak</h1>
+		<h1><a href="/">Tweetbak</a></h1>
 		<h2>Your twitter, backed up</h2>
 		<a href="/configure">Configure tweetbak</a>
 		<a href="{{ url }}">{{ url_linktext }} {{ user.email }}</a>
@@ -18,7 +18,12 @@
 
 	<div id="content">
 		<div id="page">
-			You have {{ tweets|length }} tweet{{ tweets|pluralize }} archived.
+			{% if flash.msg %}
+	            <div class="flash-msg">{{ flash.msg }}</div>
+	        {% endif %}
+			<p>{{ tweets|length }} tweet{{ tweets|pluralize }} for <em>{{ twitteruser }}</em> archived. 
+			Last updated {{ lastupdated|date:"M dS, Y" }}.
+			</p>
 			<table>
 				<tr>
 					<th>Tweet</th>
@@ -31,10 +36,10 @@
 				</tr>
 				{% endfor %}
 			</table>
-
+			<br>
 		    <div>
-		        <form action="/refresh" method="post">
-			    <button class="button" type="submit"><img src="/static/images/tick.png" alt="Add" /> Archive now!</button>
+		        <form action="/refresh" method="get">
+			    <button class="button" type="submit"><img src="/static/images/tick.png" alt="Add" /> Refresh</button>
 			</form>
 		    </div>
 		</div>
