@@ -33,7 +33,7 @@ class Configuration(db.Model):
 
     twitteruser = db.StringProperty(default = "")
     lastupdated = db.DateTimeProperty(default = None)
-    lasttweetid = db.StringProperty(default = "")
+    lasttweetid = db.IntegerProperty(default = 1)
     twitter_tweetcount = db.IntegerProperty(default = 0)
     owner = db.UserProperty(required = True)
 
@@ -41,12 +41,10 @@ class Configuration(db.Model):
 class Tweet(db.Model):
     """One twitter entry"""
 
-    content = db.StringProperty(required = True)
-    date = db.DateTimeProperty(auto_now_add=True)
+    twitterid = db.IntegerProperty(required = True)
+    content = db.StringProperty(required = True, multiline = True)
+    date = db.DateTimeProperty(auto_now_add = True)
     owner = db.UserProperty(required = True)
-
-
-# -- Twitter db entries --------------------------------------------------
 
 
 # -- Controllers ---------------------------------------------------------
@@ -65,7 +63,11 @@ class Welcome(webapp.RequestHandler):
         self.response.out.write(template.render('welcome.html', kwargs))
 
 def old():
-    return datetime.datetime.now()-datetime.timedelta(seconds=1)
+    """
+    Function to define how old the last status lock must be
+    before refreshing the feed
+    """
+    return datetime.datetime.now()-datetime.timedelta(minutes=1)
     return datetime.datetime.now()-datetime.timedelta(hours=1)
 
 class Tweets(webapp.RequestHandler):
@@ -76,16 +78,20 @@ class Tweets(webapp.RequestHandler):
         if not users.get_current_user():
             self.redirect("/")
 
+        user = users.get_current_user()
         config = get_config()
+
         if not config.lastupdated or config.lastupdated < old():
             self.redirect("/refresh")
 
-        tweets = Tweet.all().order('date').fetch(10)
+        tweets = Tweet.all().filter('owner =', user).order('date').fetch(10)
+        tweetcount = Tweet.gql('WHERE owner = :user', user=user).count()
 
         kwargs = {
             'twitteruser': config.twitteruser,
             'tweets': tweets,
-            'user': users.get_current_user(),
+            'tweetcount':tweetcount,
+            'user': user,
             'url': users.create_logout_url(self.request.uri),
             'url_linktext': 'Logout',
             'request': self.request,
@@ -102,8 +108,17 @@ class Refresh(webapp.RequestHandler):
     if any are found"""
 
     def get(self):
+        flash = Flash()
+
+        if not users.get_current_user():
+            self.redirect("/")
+
+        user = users.get_current_user()
 
         config = get_config()
+
+        if not config.twitteruser:
+            self.redirect("/configure")
 
         if config.lastupdated and (config.lastupdated > old()):
 
@@ -112,27 +127,73 @@ class Refresh(webapp.RequestHandler):
 
         else:
 
-            api = twitter.Api()
-            statuses = api.GetUserTimeline(config.twitteruser, count=200)
-            largestid = 0
+            api = twitter.Api(cache = None)
+            
+            # if this is the first time we're seeing this user
+            # do a full refresh
+            statuses = api.GetUserTimeline(config.twitteruser, count = 1)
+            if config.lasttweetid == 1:
+                flash.msg = "Completed a full refresh"
+                pages = (int(float(int(statuses[0].user.statuses_count))/float(80)))+1
+                i = 1
+                largestid = 0
+                while i <= pages:
+                    statuses = api.GetUserTimeline(
+                        config.twitteruser, 
+                        page = i
+                        )
 
-            for status in statuses:
-                tweet = Tweet(
-                    content= status.text,
-                    date= datetime.datetime.strptime(
-                        status.created_at, 
-                        '%a %b %d %H:%M:%S +0000 %Y'
-                        ),
-                    owner= user
+                    if len(statuses) > 1:
+                        for status in statuses:
+                            t = Tweet.all().filter("tweetid=", status.id).filter("owner=", user).fetch(1)
+                            if len(t) < 1:
+                                tweet = Tweet(
+                                    twitterid=int(status.id),
+                                    content= status.text,
+                                    date= datetime.datetime.strptime(
+                                        status.created_at, 
+                                        '%a %b %d %H:%M:%S +0000 %Y'
+                                        ),
+                                    owner= user
+                                    )
+
+                                tweet.put()
+
+                            if int(status.id) > largestid:
+                                largestid = int(status.id)
+                    i = i + 1
+            else:
+                statuses = api.GetUserTimeline(
+                    config.twitteruser, 
+                    count = 200, 
+                    since_id = config.lasttweetid
                     )
 
-                tweet.put()
+                largestid = 0
+            
+                if len(statuses) < 1:
+                    self.redirect("/tweets")
 
-                if status.id > largestid:
-                    largestid = status.id
+                for status in statuses:
+                    t = Tweet.all().filter("tweetid=", status.id).filter("owner=", user).fetch(1)
+                    if len(t) < 1:
+                        tweet = Tweet(
+                            twitterid=int(status.id),
+                            content= status.text,
+                            date= datetime.datetime.strptime(
+                                status.created_at, 
+                                '%a %b %d %H:%M:%S +0000 %Y'
+                                ),
+                            owner= user
+                            )
+
+                        tweet.put()
+
+                    if int(status.id) > largestid:
+                        largestid = int(status.id)
 
             # upate config values
-            config.lasttweetid = largestid
+            if largestid > 0: config.lasttweetid = largestid
             config.lastupdated = datetime.datetime.now()
             config.twitter_tweetcount = int(statuses[0].user.statuses_count)
             config.put()
@@ -174,6 +235,7 @@ class Configure(webapp.RequestHandler):
         config = get_config()
         config.twitteruser = self.request.get('twitteruser')
         config.lastupdated = None
+        config.lasttweetid = 1
         config.put()
 
         flash = Flash()
@@ -185,16 +247,19 @@ class Configure(webapp.RequestHandler):
         self.redirect("/tweets")
         
 def get_config():
+    """Get the configuration object for the current user"""
     user = users.get_current_user()
     if not user: return False
 
     config = Configuration.all().filter("owner =", user).fetch(1)
 
     if not config:
-        config =Configuration(owner=user)
+        config = Configuration(owner=user)
+        config.lasttweetid = 1
         config.put()
     else:
         config = config[0]
+
     return config
 
 # -- The main GAE application and routes ---------------------------------
