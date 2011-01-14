@@ -81,6 +81,9 @@ class Tweets(webapp.RequestHandler):
         user = users.get_current_user()
         config = get_config()
 
+        if not config.twitteruser:
+            self.redirect("/configure")
+
         if not config.lastupdated or config.lastupdated < old():
             self.redirect("/refresh")
 
