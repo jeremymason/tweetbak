@@ -21,7 +21,7 @@
 			{% if flash.msg %}
 	            <div class="flash-msg">{{ flash.msg }}</div>
 	        {% endif %}
-			<p>{{ tweets|length }} tweet{{ tweets|pluralize }} for <em>{{ twitteruser }}</em> archived. 
+			<p>{{ tweetcount }} tweet{{ tweets|pluralize }} for <em>{{ twitteruser }}</em> archived. 
 			Last updated {{ lastupdated|date:"M dS, Y" }}.
 			</p>
 			<table>
