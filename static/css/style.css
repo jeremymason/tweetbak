@@ -223,3 +223,12 @@ button.button:hover, a.button:hover {
 button.button:active, a.button:active {
   background-color:#e5e5e5;
 }
+
+nav {
+    margin: 15px;
+}
+nav a {
+    border: solid 1px;
+    padding: 5px;
+    margin: 5px;
+}
