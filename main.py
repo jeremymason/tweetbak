@@ -67,33 +67,45 @@ def old():
     Function to define how old the last status lock must be
     before refreshing the feed
     """
-    return datetime.datetime.now()-datetime.timedelta(minutes=1)
     return datetime.datetime.now()-datetime.timedelta(hours=1)
 
 class Tweets(webapp.RequestHandler):
     """Paginated collection of tweets"""
 
     def get(self):
-
-        if not users.get_current_user():
-            self.redirect("/")
+        page = self.request.get('page') and self.request.get('page') or 1
+        limit = self.request.get('limit') and self.request.get('limit') or 10
+        order = self.request.get('order') and self.request.get('order') or '-date'
+        (page,limit)=(int(page), int(limit))
+        offset = (page-1)*limit
 
         user = users.get_current_user()
-        config = get_config()
+        if not user: 
+            self.redirect("/")
 
-        if not config.twitteruser:
+        config = get_config()
+        if not config: 
+            self.redirect("/configure")
+
+        if not config.twitteruser: 
             self.redirect("/configure")
 
         if not config.lastupdated or config.lastupdated < old():
             self.redirect("/refresh")
 
-        tweets = Tweet.all().filter('owner =', user).order('date').fetch(10)
         tweetcount = Tweet.gql('WHERE owner = :user', user=user).count()
+
+        tweets = Tweet.all().filter('owner =', user).order(order).fetch(limit, offset)
 
         kwargs = {
             'twitteruser': config.twitteruser,
             'tweets': tweets,
             'tweetcount':tweetcount,
+            'start': offset+1,
+            'end': (offset+limit < tweetcount) and offset+limit or tweetcount,
+            'prevpage': (page-1 > 0) and (page-1) or None,
+            'nextpage': (((page+1)*limit) < tweetcount+limit) and (page+1) or None,
+            'limit': limit,
             'user': user,
             'url': users.create_logout_url(self.request.uri),
             'url_linktext': 'Logout',
@@ -113,81 +125,90 @@ class Refresh(webapp.RequestHandler):
     def get(self):
         flash = Flash()
 
-        if not users.get_current_user():
+        user = users.get_current_user()
+        if not user: 
             self.redirect("/")
 
-        user = users.get_current_user()
-
         config = get_config()
+        if not config: 
+            self.redirect("/")
 
         if not config.twitteruser:
             self.redirect("/configure")
 
         if config.lastupdated and (config.lastupdated > old()):
-
             flash = Flash()
-            flash.msg = "Twitter stream not refreshed -- Recently done ("+str(config.lastupdated)+")"
+            lastupdate = config.lastupdated.strftime("%M %d%S, %Y")
+            flash.msg = "Twitter stream not refreshed -- Recently done ("+str(lastupdate)+")"
 
         else:
 
             api = twitter.Api(cache = None)
-            
-            # if this is the first time we're seeing this user
-            # do a full refresh
+
+            # A few global updates to the config
             statuses = api.GetUserTimeline(config.twitteruser, count = 1)
-            if config.lasttweetid == 1:
-                flash.msg = "Completed a full refresh"
-                pages = (int(float(int(statuses[0].user.statuses_count))/float(80)))+1
-                i = 1
+            config.twitter_tweetcount = statuses[0].user.statuses_count
+            config.lastupdated = datetime.datetime.now()
+
+            # If this is the first time we're seeing this user
+            # do a full refresh
+            if not config.lasttweetid:
+                page = 1
                 largestid = 0
-                while i <= pages:
-                    statuses = api.GetUserTimeline(
-                        config.twitteruser, 
-                        page = i
-                        )
 
-                    if len(statuses) > 1:
-                        for status in statuses:
-                            t = Tweet.all().filter("tweetid=", status.id).filter("owner=", user).fetch(1)
-                            if len(t) < 1:
-                                tweet = Tweet(
-                                    twitterid=int(status.id),
-                                    content= status.text,
-                                    date= datetime.datetime.strptime(
-                                        status.created_at, 
-                                        '%a %b %d %H:%M:%S +0000 %Y'
-                                        ),
-                                    owner= user
-                                    )
+                # Get the first page of tweets to prime the while loop
+                statuses = api.GetUserTimeline(config.twitteruser, page = page)
 
-                                tweet.put()
+                # For all pages of tweets
+                while len(statuses) > 0:
+                    for status in statuses:
 
-                            if int(status.id) > largestid:
-                                largestid = int(status.id)
-                    i = i + 1
+                        # If this tweet is not already backed up
+                        t = Tweet.all().filter("tweetid=", status.id).filter("owner=", user).fetch(1)
+                        if len(t) < 1:
+
+                            # Save this tweet!
+                            tweet = Tweet(
+                                twitterid = int(status.id),
+                                content = status.text,
+                                date = datetime.datetime.strptime(
+                                    status.created_at, 
+                                    '%a %b %d %H:%M:%S +0000 %Y'
+                                    ),
+                                owner = user
+                                )
+                            tweet.put()
+
+                        # Save the most recent (largest) tweet id we've seen
+                        if int(status.id) > largestid: largestid = int(status.id)
+
+                    # Move on to the next page of tweets
+                    page += 1
+                    statuses = api.GetUserTimeline(config.twitteruser, page = page)
             else:
+                # Incremental refresh
                 statuses = api.GetUserTimeline(
                     config.twitteruser, 
                     count = 200, 
                     since_id = config.lasttweetid
                     )
 
-                largestid = 0
-            
                 if len(statuses) < 1:
                     self.redirect("/tweets")
+
+                largestid = 0
 
                 for status in statuses:
                     t = Tweet.all().filter("tweetid=", status.id).filter("owner=", user).fetch(1)
                     if len(t) < 1:
                         tweet = Tweet(
-                            twitterid=int(status.id),
-                            content= status.text,
-                            date= datetime.datetime.strptime(
+                            twitterid = int(status.id),
+                            content = status.text,
+                            date = datetime.datetime.strptime(
                                 status.created_at, 
                                 '%a %b %d %H:%M:%S +0000 %Y'
                                 ),
-                            owner= user
+                            owner = user
                             )
 
                         tweet.put()
@@ -196,9 +217,12 @@ class Refresh(webapp.RequestHandler):
                         largestid = int(status.id)
 
             # upate config values
-            if largestid > 0: config.lasttweetid = largestid
-            config.lastupdated = datetime.datetime.now()
-            config.twitter_tweetcount = int(statuses[0].user.statuses_count)
+            if largestid > config.lasttweetid: 
+                config.lasttweetid = largestid
+
+            if len(statuses) > 0:
+                config.twitter_tweetcount = int(statuses[0].user.statuses_count)
+
             config.put()
             
             # notice to the user
@@ -213,16 +237,17 @@ class Configure(webapp.RequestHandler):
     
     def get(self):
         user = users.get_current_user()
-        if not user:
+        if not user: 
             self.redirect("/")
 
         config = get_config()
+        twitteruser = config and config.twitteruser or ""
 
         kwargs = {
             'user': user,
             'url': users.create_logout_url(self.request.uri),
             'url_linktext': 'Logout',
-            'twitteruser': config.twitteruser,
+            'twitteruser': twitteruser,
             'year': datetime.datetime.now().year
             }
 
@@ -233,37 +258,46 @@ class Configure(webapp.RequestHandler):
         """update/save the twitter username"""
 
         user = users.get_current_user()
-        if not user: self.redirect("/")
+        if not user: 
+            self.redirect("/")
 
         config = get_config()
         config.twitteruser = self.request.get('twitteruser')
         config.lastupdated = None
-        config.lasttweetid = 1
+        config.lasttweetid = 0
+        config.twitter_tweetcount = 0
         config.put()
+
+        # Delete all existing backedup tweets
+        for t in Tweet.all().filter("owner = ", user):
+            t.delete()
 
         flash = Flash()
         flash.msg = "Tweetbak configuration updated, all previous tweets removed"
 
-        for t in Tweet.all().filter("owner =", user):
-            t.delete()
-
         self.redirect("/tweets")
+
         
 def get_config():
     """Get the configuration object for the current user"""
-    user = users.get_current_user()
-    if not user: return False
 
-    config = Configuration.all().filter("owner =", user).fetch(1)
+    user = users.get_current_user()
+    if not user: 
+        return None
+
+    config = Configuration.all().filter("owner = ", user).fetch(1)
 
     if not config:
-        config = Configuration(owner=user)
-        config.lasttweetid = 1
+        config = Configuration(owner = user)
+        config.lastupdated = None
+        config.lasttweetid = 0
+        config.twitter_tweetcount = 0
         config.put()
     else:
         config = config[0]
 
     return config
+
 
 # -- The main GAE application and routes ---------------------------------
 application = webapp.WSGIApplication([

@@ -36,6 +36,12 @@
 				</tr>
 				{% endfor %}
 			</table>
+
+			<nav>
+				{% if prevpage %}<a href="/tweets?page={{ prevpage }}&limit={{ limit }}">&laquo; Prev</a>{% endif %}
+				Tweets {{ start }} - {{ end }} of {{ tweetcount }}
+				{% if nextpage %}<a href="/tweets?page={{ nextpage }}&limit={{ limit }}">Next &raquo;</a>{% endif %}
+			</nav>
 			<br>
 		    <div>
 		        <form action="/refresh" method="get">
