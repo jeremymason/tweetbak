@@ -90,8 +90,8 @@ class Tweets(webapp.RequestHandler):
         if not config.twitteruser: 
             self.redirect("/configure")
 
-        if not config.lastupdated or config.lastupdated < old():
-            self.redirect("/refresh")
+        #if not config.lastupdated or config.lastupdated < old():
+        #    self.redirect("/refresh")
 
         tweetcount = Tweet.gql('WHERE owner = :user', user=user).count()
 
@@ -124,6 +124,8 @@ class Refresh(webapp.RequestHandler):
 
     def get(self):
         flash = Flash()
+        flash.msg = ""
+        number_of_api_calls = 0
 
         user = users.get_current_user()
         if not user: 
@@ -149,6 +151,7 @@ class Refresh(webapp.RequestHandler):
             statuses = api.GetUserTimeline(config.twitteruser, count = 1)
             config.twitter_tweetcount = statuses[0].user.statuses_count
             config.lastupdated = datetime.datetime.now()
+            number_of_api_calls += 1
 
             # If this is the first time we're seeing this user
             # do a full refresh
@@ -157,7 +160,15 @@ class Refresh(webapp.RequestHandler):
                 largestid = 0
 
                 # Get the first page of tweets to prime the while loop
-                statuses = api.GetUserTimeline(config.twitteruser, page = page)
+                statuses = api.GetUserTimeline(
+                    config.twitteruser, 
+                    page = page,
+                    trim_user = True,
+                    count = 200
+                    )
+                number_of_api_calls += 1
+                
+                already_loaded = set()
 
                 # For all pages of tweets
                 while len(statuses) > 0:
@@ -165,26 +176,37 @@ class Refresh(webapp.RequestHandler):
 
                         # If this tweet is not already backed up
                         t = Tweet.all().filter("tweetid=", status.id).filter("owner=", user).fetch(1)
-                        if len(t) < 1:
+                        
+                        if len(t) > 0 or status.id in already_loaded:
+                            continue
 
-                            # Save this tweet!
-                            tweet = Tweet(
-                                twitterid = int(status.id),
-                                content = status.text,
-                                date = datetime.datetime.strptime(
-                                    status.created_at, 
-                                    '%a %b %d %H:%M:%S +0000 %Y'
-                                    ),
-                                owner = user
-                                )
-                            tweet.put()
+                        already_loaded.add(status.id)
+
+                        # Save this tweet!
+                        tweet = Tweet(
+                            twitterid = int(status.id),
+                            content = status.text,
+                            date = datetime.datetime.strptime(
+                                status.created_at, 
+                                '%a %b %d %H:%M:%S +0000 %Y'
+                                ),
+                            owner = user
+                            )
+                        tweet.put()
 
                         # Save the most recent (largest) tweet id we've seen
                         if int(status.id) > largestid: largestid = int(status.id)
 
                     # Move on to the next page of tweets
                     page += 1
-                    statuses = api.GetUserTimeline(config.twitteruser, page = page)
+                    statuses = api.GetUserTimeline(
+                        config.twitteruser, 
+                        page = page,
+                        trim_user = True,
+                        count = 200
+                        )
+                    number_of_api_calls += 1
+                    flash.msg += "<br>Number of twitter calls: "+str(number_of_api_calls)+"<br>"
             else:
                 # Incremental refresh
                 statuses = api.GetUserTimeline(
@@ -200,18 +222,20 @@ class Refresh(webapp.RequestHandler):
 
                 for status in statuses:
                     t = Tweet.all().filter("tweetid=", status.id).filter("owner=", user).fetch(1)
-                    if len(t) < 1:
-                        tweet = Tweet(
-                            twitterid = int(status.id),
-                            content = status.text,
-                            date = datetime.datetime.strptime(
-                                status.created_at, 
-                                '%a %b %d %H:%M:%S +0000 %Y'
-                                ),
-                            owner = user
-                            )
+                    if len(t) > 0:
+                        continue
 
-                        tweet.put()
+                    tweet = Tweet(
+                        twitterid = int(status.id),
+                        content = status.text,
+                        date = datetime.datetime.strptime(
+                            status.created_at, 
+                            '%a %b %d %H:%M:%S +0000 %Y'
+                            ),
+                        owner = user
+                        )
+
+                    tweet.put()
 
                     if int(status.id) > largestid:
                         largestid = int(status.id)
@@ -226,8 +250,7 @@ class Refresh(webapp.RequestHandler):
             config.put()
             
             # notice to the user
-            flash = Flash()
-            flash.msg = "Twitter stream refreshed"
+            flash.msg += "Twitter stream refreshed"
 
         self.redirect('/tweets')
 

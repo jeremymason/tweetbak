@@ -2368,6 +2368,7 @@ class Api(object):
                       count=None,
                       page=None,
                       include_rts=None,
+                      trim_user=None,
                       include_entities=None):
     '''Fetch the sequence of public Status messages for a single user.
 
@@ -2455,6 +2456,9 @@ class Api(object):
 
     if include_entities:
       parameters['include_entities'] = 1
+
+    if trim_user:
+      parameters['trim_user'] = 1
 
     json = self._FetchUrl(url, parameters=parameters)
     data = simplejson.loads(json)
