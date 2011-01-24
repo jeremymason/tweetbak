@@ -17,13 +17,22 @@
 	</div>
 
 	<div id="content">
-		{% if twittername %}
-		<div>Warning: Changing the twitter username deletes all currently archived tweets</div>
-		{% endif %}
-		Twitter username to archive:
-		<form action="/configure" method="post"  style="display:inline" >
-			<input style="display:inline" type="text" size="25" value="{{ twitteruser }}" name="twitteruser">
-			<button  class="button"  style="display:inline;float:none" type="submit"><img src="/static/images/tick.png" alt="Add" /> Submit</button>
+		Twitter usernames to archive:
+		{% for stream in tweetstreams %}
+		<br />
+		<form action="/configure" method="post" style="display:inline" >
+			<input type="hidden" value="delete" name="action">
+			<input type="hidden" value="{{ stream.key }}" name="tid">
+			{{ stream.twitteruser }}
+			<button class="button" style="display:inline;float:none" type="submit"><img src="/static/images/tick.png" alt="Delete" /> Delete</button>
+		</form>
+		{% endfor %}
+		<br />		<br />
+		New twitter username to archive:
+		<form action="/configure" method="post" style="display:inline" >
+			<input type="hidden" value="add" name="action">
+			<input style="display:inline" type="text" size="25" value="" name="twitteruser">
+			<button  class="button" style="display:inline;float:none" type="submit"><img src="/static/images/tick.png" alt="Delete" /> Add</button>
 		</form>
 		<div class="clear"></div>
 	</div>

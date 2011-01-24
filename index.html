@@ -21,6 +21,13 @@
 			{% if flash.msg %}
 	            <div class="flash-msg">{{ flash.msg }}</div>
 	        {% endif %}
+
+			{% for ts in twitterstreams %}
+			<ul>
+				<li><a href="/tweets?tsid={{ ts.key }}">{{ ts.twitteruser }}</a>
+			</ul>
+			{% endfor %}
+
 			<p>{{ tweetcount }} tweet{{ tweets|pluralize }} for <em>{{ twitteruser }}</em> archived. 
 			Last updated {{ lastupdated|date:"M dS, Y" }}.
 			</p>
@@ -32,20 +39,21 @@
 				{% for tweet in tweets %}
 				<tr>
 					<td>{{ tweet.content }}</td>
-					<td width="200">{{ tweet.date }}</td>
+					<td width="200">{{ tweet.created }}</td>
 				</tr>
 				{% endfor %}
 			</table>
 
 			<nav>
-				{% if prevpage %}<a href="/tweets?page={{ prevpage }}&limit={{ limit }}">&laquo; Prev</a>{% endif %}
+				{% if prevpage %}<a href="/tweets?page={{ prevpage }}&limit={{ limit }}&tsid={{ tsid }}">&laquo; Prev</a>{% endif %}
 				Tweets {{ start }} - {{ end }} of {{ tweetcount }}
-				{% if nextpage %}<a href="/tweets?page={{ nextpage }}&limit={{ limit }}">Next &raquo;</a>{% endif %}
+				{% if nextpage %}<a href="/tweets?page={{ nextpage }}&limit={{ limit }}&tsid={{ tsid }}">Next &raquo;</a>{% endif %}
 			</nav>
 			<br>
 		    <div>
 		        <form action="/refresh" method="get">
-			    <button class="button" type="submit"><img src="/static/images/tick.png" alt="Add" /> Refresh</button>
+				<input type="hidden" name="tsid" value="{{ tsid }}">
+			    <button class="button" type="submit"><img src="/static/images/tick.png" alt="Add"> Refresh</button>
 			</form>
 		    </div>
 		</div>
