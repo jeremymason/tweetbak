@@ -22,7 +22,7 @@
 		<br />
 		<form action="/configure" method="post" style="display:inline" >
 			<input type="hidden" value="delete" name="action">
-			<input type="hidden" value="{{ stream.key }}" name="tid">
+			<input type="hidden" value="{{ stream.key }}" name="tsid">
 			{{ stream.twitteruser }}
 			<button class="button" style="display:inline;float:none" type="submit"><img src="/static/images/tick.png" alt="Delete" /> Delete</button>
 		</form>
