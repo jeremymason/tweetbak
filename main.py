@@ -82,8 +82,8 @@ class Tweets(webapp.RequestHandler):
 
         tsid = self.request.get('tsid') and self.request.get('tsid') or None
         page = self.request.get('page') and self.request.get('page') or 1
-        limit = self.request.get('limit') and self.request.get('limit') or 10
-        order = self.request.get('order') and self.request.get('order') or '-date'
+        limit = self.request.get('limit') and self.request.get('limit') or 50
+        order = self.request.get('order') and self.request.get('order') or '-created'
         (page, limit) = (int(page), int(limit))
         offset = (page-1)*limit
 
@@ -106,7 +106,7 @@ class Tweets(webapp.RequestHandler):
             tweets = Tweet.all(
                 ).filter('tweetstream =', tweetstream
                 ).filter('owner =', user
-                ).order('created'
+                ).order(order
                 ).fetch(limit, offset)
         
         kwargs = {
@@ -309,7 +309,7 @@ class Retreiver(webapp.RequestHandler):
             count = MAX_TWEETS_PER_PAGE
             )
 
-        logging.debug("Got statuses: "+len(statuses))
+        logging.debug("Got statuses: "+str(len(statuses)))
 
         for status in statuses:
             # Don't save statuses we have already saved
@@ -322,7 +322,7 @@ class Retreiver(webapp.RequestHandler):
                     '%a %b %d %H:%M:%S +0000 %Y'
                     )
                 tweet.put()
-                logging.debug("Saving status: "+status.content)
+                logging.debug("Saving status: "+status.text)
         logging.debug("Done retreiver... exiting webhook")
 
 class Deleter(webapp.RequestHandler):

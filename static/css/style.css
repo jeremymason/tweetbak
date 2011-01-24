@@ -232,3 +232,22 @@ nav a {
     padding: 5px;
     margin: 5px;
 }
+
+section article p{
+    margin-left: 15px;
+}
+section article div.date {
+    font-size: .65em;
+    margin-top:15px;
+}
+nav#stream {
+    font-size: .8em;
+    float: right;
+    padding: 5px;
+    color: #6e6e6d;
+}
+
+div.info {
+    font-size: .8em;
+    color: #6e6e6d;
+}

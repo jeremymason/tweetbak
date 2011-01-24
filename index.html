@@ -22,27 +22,21 @@
 	            <div class="flash-msg">{{ flash.msg }}</div>
 	        {% endif %}
 
-			{% for ts in twitterstreams %}
-			<ul>
-				<li><a href="/tweets?tsid={{ ts.key }}">{{ ts.twitteruser }}</a>
-			</ul>
-			{% endfor %}
-
-			<p>{{ tweetcount }} tweet{{ tweets|pluralize }} for <em>{{ twitteruser }}</em> archived. 
-			Last updated {{ lastupdated|date:"M dS, Y" }}.
-			</p>
-			<table>
-				<tr>
-					<th>Tweet</th>
-					<th>Date</th>
-				</tr>
-				{% for tweet in tweets %}
-				<tr>
-					<td>{{ tweet.content }}</td>
-					<td width="200">{{ tweet.created }}</td>
-				</tr>
+			<nav id="stream">
+			<form action="/tweets" method="get">
+			Viewing tweetstream for: <select name="tsid" onchange="submit()">
+				{% for ts in twitterstreams %}
+				<option {% ifequal ts.key tsid %}selected="selected"{% endifequal %} value="{{ ts.key }}">{{ ts.twitteruser }}
 				{% endfor %}
-			</table>
+			</select>
+			</form>
+			</nav>
+
+			<section>
+				{% for tweet in tweets %}
+				<article><div class="date">At {{ tweet.created }}</div><p>{{ tweet.content }}</p></article>
+				{% endfor %}
+			</section>
 
 			<nav>
 				{% if prevpage %}<a href="/tweets?page={{ prevpage }}&limit={{ limit }}&tsid={{ tsid }}">&laquo; Prev</a>{% endif %}
@@ -50,6 +44,9 @@
 				{% if nextpage %}<a href="/tweets?page={{ nextpage }}&limit={{ limit }}&tsid={{ tsid }}">Next &raquo;</a>{% endif %}
 			</nav>
 			<br>
+			<div class="info">{{ tweetcount }} tweet{{ tweets|pluralize }} for <em>{{ twitteruser }}</em> archived. 
+			Last updated {{ lastupdated|date:"M dS, Y" }}.
+			</div>
 		    <div>
 		        <form action="/refresh" method="get">
 				<input type="hidden" name="tsid" value="{{ tsid }}">
@@ -57,6 +54,7 @@
 			</form>
 		    </div>
 		</div>
+
 	</div>
 	
 	<div id="footer">
