@@ -32,6 +32,7 @@ from localsettings import *
 # -- Globals -------------------------------------------------------------
 session = sessions.Session()
 MAX_TWEETS_PER_PAGE = 100
+TWITTER_CALL_DELAY = 150
 
 # -- Models --------------------------------------------------------------
 class TweetStream(db.Model):
@@ -164,7 +165,7 @@ class Refresh(webapp.RequestHandler):
             taskqueue.add(url = "/tweetretreiver", 
                 queue_name = "get-tweets",
                 name = "GetTweets-"+tweetstream.twitteruser+"-"+str(i)+"-"+str(int(time.time())),
-                countdown = 30 * i,
+                countdown = TWITTER_CALL_DELAY * i,
                 params = {
                     'page': i,
                     'tsid': tweetstream.key()
@@ -307,6 +308,7 @@ class Retreiver(webapp.RequestHandler):
             tweetstream.twitteruser, 
             page = page,
             trim_user = True,
+            include_rts = True,
             count = MAX_TWEETS_PER_PAGE
             )
 
