@@ -7,13 +7,14 @@ than that.
 """
 
 # -- Imports -------------------------------------------------------------
-import datetime
 import cgi
-import os
-from math import ceil
+import datetime
 import logging
-
+from math import ceil
+import os
+import time
 import twitter
+
 import simplejson as json
 from appengine_utilities import sessions
 from appengine_utilities.flash import Flash
@@ -162,7 +163,7 @@ class Refresh(webapp.RequestHandler):
         for i in xrange(1, pages+1):
             taskqueue.add(url = "/tweetretreiver", 
                 queue_name = "get-tweets",
-                name = "GetTweets-"+tweetstream.twitteruser+"-"+str(i),
+                name = "GetTweets-"+tweetstream.twitteruser+"-"+str(i)+"-"+str(int(time.time())),
                 countdown = 30 * i,
                 params = {
                     'page': i,
@@ -326,6 +327,11 @@ class Retreiver(webapp.RequestHandler):
         logging.debug("Done retreiver... exiting webhook")
 
 class Deleter(webapp.RequestHandler):
+    
+    def get(self):
+        taskqueue.add(url = "/tweetdeleter")
+        logging.debug('Added delete all tweets task to the default queue')
+
     def post(self):
         logging.debug("Start deleter... entering webhook")
         tweets = Tweet.all()
