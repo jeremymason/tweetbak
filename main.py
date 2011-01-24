@@ -49,7 +49,7 @@ class Tweet(db.Model):
     
     tweetstream = db.ReferenceProperty(TweetStream, required = True)
     tweetid = db.StringProperty()
-    content = db.StringProperty()
+    content = db.StringProperty(multiline = True)
     created = db.DateTimeProperty()
     owner = db.UserProperty(required = True)
     
