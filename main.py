@@ -171,7 +171,7 @@ class Refresh(webapp.RequestHandler):
                     'tsid': tweetstream.key()
                 },
                 )
-            logging.debug('Enqueued get-tweets for page'+str(i)+" start at tweet "+str(MAX_TWEETS_PER_PAGE*page))
+            logging.debug('Enqueued get-tweets for page'+str(i)+" start at tweet "+str(MAX_TWEETS_PER_PAGE*i))
 
         # notice to the user
         flash.msg += "Twitter stream queued for archive. "+str(pages)+" operations required, this could take a few minutes."
