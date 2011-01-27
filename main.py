@@ -31,7 +31,7 @@ from localsettings import *
 
 # -- Globals -------------------------------------------------------------
 session = sessions.Session()
-MAX_TWEETS_PER_PAGE = 100
+MAX_TWEETS_PER_PAGE = 200
 TWITTER_CALL_DELAY = 150
 
 # -- Models --------------------------------------------------------------
@@ -243,8 +243,13 @@ def new_tweetstream(twitteruser = ""):
 
     # A few global updates to the tweetstream
     statuses = api.GetUserTimeline(twitteruser, count = 1)
+
+    if len(statuses) < 1:
+        flash = Flash()
+        flash.msg = "User not found"
+        return None
+
     status = statuses[0]
-    
     if not status:
         return None
     
