@@ -32,7 +32,7 @@ from localsettings import *
 # -- Globals -------------------------------------------------------------
 session = sessions.Session()
 MAX_TWEETS_PER_PAGE = 200
-TWITTER_CALL_DELAY = 150
+TWITTER_CALL_DELAY = 15
 
 # -- Models --------------------------------------------------------------
 class TweetStream(db.Model):
@@ -40,19 +40,19 @@ class TweetStream(db.Model):
 
     twitterid = db.IntegerProperty()
     twitteruser = db.StringProperty()
-    count = db.IntegerProperty(default = 0)
-    lastupdated = db.DateTimeProperty(auto_now_add = True)
-    owner = db.UserProperty(required = True)
+    count = db.IntegerProperty(default=0)
+    lastupdated = db.DateTimeProperty(auto_now_add=True)
+    owner = db.UserProperty(required=True)
 
 
 class Tweet(db.Model):
     """Represents one tweet"""
     
-    tweetstream = db.ReferenceProperty(TweetStream, required = True)
+    tweetstream = db.ReferenceProperty(TweetStream, required=True)
     tweetid = db.StringProperty()
-    content = db.StringProperty(multiline = True)
+    content = db.StringProperty(multiline=True)
     created = db.DateTimeProperty()
-    owner = db.UserProperty(required = True)
+    owner = db.UserProperty(required=True)
     
 
 # -- Controllers ---------------------------------------------------------
@@ -161,7 +161,7 @@ class Refresh(webapp.RequestHandler):
         page = 1
         pages = ceil(tweetstream.count/MAX_TWEETS_PER_PAGE)+1
         
-        for i in xrange(1, pages+1):
+        for i in xrange(1, int(pages)+1):
             taskqueue.add(url = "/tweetretreiver", 
                 queue_name = "get-tweets",
                 name = "GetTweets-"+tweetstream.twitteruser+"-"+str(i)+"-"+str(int(time.time())),
@@ -322,15 +322,17 @@ class Retreiver(webapp.RequestHandler):
         for status in statuses:
             # Don't save statuses we have already saved
             if not Tweet.all().filter("tweetid =", str(status.id)).get():
-                tweet = Tweet(tweetstream = tweetstream, owner = tweetstream.owner)
-                tweet.tweetid = str(status.id)
-                tweet.content = status.text
-                tweet.created = datetime.datetime.strptime(
-                    status.created_at, 
-                    '%a %b %d %H:%M:%S +0000 %Y'
-                    )
-                tweet.put()
-                logging.debug("Saving status: "+status.text)
+                try:
+                    tweet = Tweet(tweetstream = tweetstream, owner = tweetstream.owner)
+                    tweet.tweetid = str(status.id)
+                    tweet.content = status.text
+                    tweet.created = datetime.datetime.strptime(
+                        status.created_at, 
+                        '%a %b %d %H:%M:%S +0000 %Y'
+                        )
+                    tweet.put()
+                except:
+                    logging.debug("Error saving status: "+status.text)
         logging.debug("Done retreiver... exiting webhook")
 
 class Deleter(webapp.RequestHandler):
