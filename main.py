@@ -141,9 +141,6 @@ class Refresh(webapp.RequestHandler):
         flash = Flash()
         flash.msg = ""
 
-        taskqueue.add(url = "/tweetdeleter")
-        logging.debug('Added delete all tweets task to the default queue')
-        
         user = users.get_current_user()
         tsid = self.request.get("tsid")
 
