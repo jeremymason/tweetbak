@@ -47,7 +47,7 @@
 
 			<section>
 				{% for tweet in tweets %}
-				<article><span>{{ forloop.counter }} At {{ tweet.created }}</span><p>{{ tweet.content }}</p></article>
+				<article><span>At {{ tweet.created }}</span><p>{{ tweet.content }}</p></article>
 				{% endfor %}
 				{% ifequal len(tweets) 0 %}
 				<article>Your twitter stream is being archived. Please try again later</article>
