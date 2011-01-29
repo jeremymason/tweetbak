@@ -14,6 +14,7 @@ from math import ceil
 import os
 import time
 import twitter
+import pickle
 
 import simplejson as json
 from appengine_utilities import sessions
@@ -22,6 +23,7 @@ from appengine_utilities.flash import Flash
 from google.appengine.api import taskqueue
 from google.appengine.api import users
 from google.appengine.ext import db
+from google.appengine.ext import search
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
@@ -40,12 +42,13 @@ class TweetStream(db.Model):
 
     twitterid = db.IntegerProperty()
     twitteruser = db.StringProperty()
+    twitterresponse = db.TextProperty()
     count = db.IntegerProperty(default=0)
     lastupdated = db.DateTimeProperty(auto_now_add=True)
     owner = db.UserProperty(required=True)
 
 
-class Tweet(db.Model):
+class Tweet(search.SearchableModel):
     """Represents one tweet"""
     
     tweetstream = db.ReferenceProperty(TweetStream, required=True)
@@ -97,6 +100,7 @@ class Tweets(webapp.RequestHandler):
 
         tsid = tweetstream.key()
         tweetcount = 0
+        archivecount = "none"
         twitteruser = ""
         lastupdated = ""
         tweets = []
@@ -110,14 +114,23 @@ class Tweets(webapp.RequestHandler):
                 ).filter('owner =', user
                 ).order(order
                 ).fetch(limit, offset)
+            archivecount = Tweet.all(
+                ).filter('tweetstream =', tweetstream
+                ).filter('owner =', user
+                ).order(order
+                ).count()
+            if not archivecount:
+                archivecount = "none"
         
         kwargs = {
             'twitteruser': twitteruser,
             'twitterstreams': TweetStream.all().filter("owner =", user),
             'tweetcount':tweetcount,
+            'archivecount':archivecount,
             'tweets': tweets,
             'tsid': tsid,
             'start': offset+1,
+            'i':1,
             'end': (offset+limit < tweetcount) and offset+limit or tweetcount,
             'prevpage': (page-1 > 0) and (page-1) or None,
             'nextpage': (((page+1)*limit) < tweetcount+limit) and (page+1) or None,
@@ -174,12 +187,100 @@ class Refresh(webapp.RequestHandler):
         flash.msg += "Twitter stream queued for archive. "+str(pages)+" operations required, this could take a few minutes."
 
         self.redirect('/tweets?tsid='+tsid)
+
+
+class Search(webapp.RequestHandler):
+    """Search archived tweets"""
+
+    def get(self):
+        flash = Flash()
+
+        user = users.get_current_user()
+
+        if not user: 
+            self.redirect("/")
+            return
+
+        tsid = self.request.get('tsid') and self.request.get('tsid') or None
+        page = self.request.get('page') and self.request.get('page') or 1
+        limit = self.request.get('limit') and self.request.get('limit') or 50
+        order = self.request.get('order') and self.request.get('order') or '-created'
+        (page, limit) = (int(page), int(limit))
+        offset = (page-1)*limit
+
+        tweetstream = get_tweetstream(self.request.get('tsid'))
+
+        if not tweetstream:
+            self.redirect("/configure")
+            return
+
+        terms = self.request.get('term')
+
+        if not terms:
+            flash.msg = "Search term not found"
+            self.redirect("/tweets")
+            return
+            
+        tsid = tweetstream.key()
+        tweetcount = 0
+        resultcount = 0
+        archivecount = "none"
+        twitteruser = ""
+        lastupdated = ""
+        tweets = []
+
+        if tweetstream:
+            tweetcount = tweetstream.count
+            twitteruser = tweetstream.twitteruser
+            lastupdated = tweetstream.lastupdated
+            tweets = Tweet.all(
+                ).filter('tweetstream =', tweetstream
+                ).filter('owner =', user
+                ).search(terms
+                ).order(order
+                ).fetch(limit, offset)
+            resultcount = Tweet.all(
+                ).filter('tweetstream =', tweetstream
+                ).filter('owner =', user
+                ).search(terms
+                ).order(order
+                ).count()
+            archivecount = Tweet.all(
+                ).filter('tweetstream =', tweetstream
+                ).filter('owner =', user
+                ).order(order
+                ).count()
+            if not archivecount:
+                archivecount = "none"
+
+        results = "".join(["Your search for: ", terms, " returned ", str(resultcount), " results."])
         
-        
-    def post(self):
-        '''
-        Perform the twitter API call and store the resulting tweet objects
-        '''
+        kwargs = {
+            'twitteruser': twitteruser,
+            'twitterstreams': TweetStream.all().filter("owner =", user),
+            'tweetcount':tweetcount,
+            'archivecount':archivecount,
+            'tweets': tweets,
+            'tsid': tsid,
+            'start': offset+1,
+            'i':1,
+            'end': (offset+limit < resultcount) and offset+limit or resultcount,
+            'prevpage': (page-1 > 0) and (page-1) or None,
+            'nextpage': (((page+1)*limit) < resultcount+limit) and (page+1) or None,
+            'limit': limit,
+            'user': user,
+            'terms':terms,
+            'request': self.request,
+            'flash': Flash(),
+            'results': results,
+            'resultcount':resultcount,
+            'lastupdated': lastupdated,
+            'year': datetime.datetime.now().year
+            }
+
+        self.response.out.write(
+            template.render('search.html', kwargs))
+
 
 class Configure(webapp.RequestHandler):
     """Configure which twitter account to archive"""
@@ -253,6 +354,7 @@ def new_tweetstream(twitteruser = ""):
     if TweetStream.all().filter('owner =', user).filter('twitteruser =', twitteruser).count() < 1:
         tweetstream = TweetStream(owner = user, twitteruser = twitteruser)
         tweetstream.twitterid = status.user.id
+        tweetstream.twitterresponse = str(status)
         tweetstream.count = status.user.statuses_count
         tweetstream.put()
     else:
@@ -351,6 +453,7 @@ class Deleter(webapp.RequestHandler):
 application = webapp.WSGIApplication([
     ('/', Welcome),
     ('/tweets', Tweets),
+    ('/search', Search),
     ('/refresh', Refresh),
     ('/configure', Configure),
     ('/tweetretreiver', Retreiver),

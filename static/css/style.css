@@ -6,11 +6,11 @@
 	margin:0;
 }
 body {
-	font-family:Helvetica;
+	font-family:Georgia, "Times New Roman", Times, serif;
 	font-size:1.0em;
 	background-color:#fff;
 	margin:0 auto;
-	padding:50px;
+	padding:0;
 	height:100%;
 }
 
@@ -19,61 +19,24 @@ body {
 */
 div#header {
     color: #3687C9;
-	height:149px;
-}
-div#content {
+	padding: 0 10px;
 }
 div#page {
-	background-color:#ffffff;
     min-height: 250px;
-    padding: 10px;
+    padding: 0;
 }
 
-div#topbar {
-}
-div#topbar ul {
-	display: inline;
-	list-style:none;
-	margin:0;
-	padding:0;
-}
-div#topbar ul li {
-	display: inline;
-	list-style: none;
-	border: solid 1px green;
-}
-div#topbar ul li a {
-	background-color:#f4de9f;
-	color:#878787;
-	padding: 3px 10px;
-	text-decoration:none;
-}
-div#topbar ul li a:hover {
-	background-color:#e8e8e8;
-	color:#ae0000;
-}
-div#topbar ul li a.selected, div#topbar ul li a.selected:hover {
-	background-color:#ffffff;
-	border-bottom: solid 1px white;
-	border-right:none;
-	font-weight:bold;
-	color:#363DC9;
-}
-
-
-/*
-	headers
-*/
 h1 {
-	font-size:2.8em;
-	font-family:Georgia, "Times New Roman", Times, serif;
+	font-size:2.2em;
 	font-weight:normal;
 	line-height:150%;
 }
+
 h2 {
+	font-size:0.9em;
 	font-weight:normal;
 	padding:0;
-	margin:-10px 0 0 0;
+	margin: -10px 0 10px 0;
 }
 
 h3 {
@@ -81,11 +44,6 @@ h3 {
 	font-weight:normal;
 }
 
-
-
-/*
-	links
-*/
 a {
 	color:#910000;
 }
@@ -93,8 +51,6 @@ a:hover {
 	color:#880000;
 }
 
-
-/* paragraphs */
 p {
 	font-size:90%;
 	line-height:150%;
@@ -103,10 +59,10 @@ p {
 
 
 
-/* footer */
 div#footer {
-	padding: 10px 0;
+	padding: 10px;
 }
+
 div#footer p {
 	text-align:right;
 	margin:0;
@@ -119,63 +75,11 @@ div#footer p, div#footer a {
 
 
 
-/* forms, labels, inputs */
-input.button {
-	font-weight:bold;
-	padding:5px 15px;
-}
-input, textarea {
+input {
 	padding:5px;
 	background-color:#ffffff;
 	border:1px solid #dddddd;
 }
-label {
-	font-weight:bold;
-}
-form input.formbutton {
-	background-color:#950303;
-	color:#FFFFFF;
-	font-weight:bold;
-	padding:5px 10px;
-}
-
-
-
-/** tables */
-table {
-	width:100%;
-	font-size:75%;
-}
-table tr th {
-	color:#ffffff;
-	background-color:#333333;
-}
-table tr th, table tr td {
-	padding:5px 10px;
-	text-align:left;
-}
-table tr td {
-	border-bottom:1px solid #dddddd;
-}
-
-
-
-/** lists */
-div.sidebar ul {
-	list-style:none;
-	padding:0;
-	border-top:4px solid #dddddd;
-	margin:0 0 20px 0
-}
-ul {
-	margin:0 0 20px 20px;
-	padding:0;
-}
-ul li {
-	padding:3px 0;
-}
-
-
 
 /*  Inspired by http://particletree.com/features/rediscovering-the-button-element */
 
@@ -197,10 +101,12 @@ a.button:link, a.button:visited, a.button:hover, a.button:active, button.button 
 button.button {
   width:auto;
   overflow:visible;
-  padding:2px 5px; /* IE6 */
+  padding:1px 3px; /* IE6 */
+  float: none;
+  display: inline;
 }
 button.button[type] {
-  padding:2px 5px; /* Firefox */
+  padding:1px 3px; /* Firefox */
   line-height:17px; /* Safari */
 }
 
@@ -233,21 +139,60 @@ nav a {
     margin: 5px;
 }
 
-section article p{
-    margin-left: 15px;
+section article {
+    border-bottom: dashed 1px #f9f9f9;
 }
-section article div.date {
-    font-size: .65em;
-    margin-top:15px;
+section article p {
+    display:inline;
+    margin-top: 5px;
+    margin-left: 5px;
+	color: #000;
+	font-size:1.1em;
 }
+section article span{
+    display:block;
+	font-size:75%;
+	color: #8e8e8e;
+}
+
 nav#stream {
     font-size: .8em;
     float: right;
     padding: 5px;
     color: #6e6e6d;
 }
+nav#stream form {
+    float:left;
+    display: inline;
+    padding: 5px;
+}
 
-div.info {
+div.utility {
+    position: absolute;
+    top: 5px;
+    right: 5px;
     font-size: .8em;
     color: #6e6e6d;
+    text-align: right;
+}
+
+a.img {
+    padding-left: 18px;
+}
+a.export {
+    background-image: url(/static/images/email_go.png);
+    background-repeat: no-repeat;
+}
+a.configure {
+    background-image: url(/static/images/bricks.png);
+    background-repeat: no-repeat;
+}
+a.logout {
+    background-image: url(/static/images/exclamation.png);
+    background-repeat: no-repeat;
+}
+a.update {
+    background-image: url(/static/images/arrow_refresh.png);
+    background-repeat: no-repeat;
+    border: none;
 }

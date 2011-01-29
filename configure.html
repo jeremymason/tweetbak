@@ -10,10 +10,15 @@
 <body>
 <div id="wrap">
 	<div id="header">
-		<h1><a href="/">Tweetbak</a></h1> 
-		<h2>Backup your tweet stream</h2>
-		<a href="/tweets">Tweets</a>
-		<a href="{{ url }}">{{ url_linktext }} {{ user.email }}</a>
+		<h1><a href="/">Tweetbak</a></h1>
+		<h2>Your twitter, backed up</h2>
+		<div class="utility">
+			<a href="/export"><img src="/static/images/email_go.png" alt="Export"> Export</a>&nbsp;|&nbsp;
+		    <a href="/configure"><img src="/static/images/bricks.png" alt="Configure"> Configure</a>&nbsp;|&nbsp;
+		    <a href="{{ url }}"><img src="/static/images/exclamation.png" alt="Logout"> Logout {{ user.email }}</a><br>
+			{{ tweetcount }} tweet{{ tweets|pluralize }} for <em>{{ twitteruser }}</em> archived. 
+			Last updated {{ lastupdated|date:"M dS, Y" }}.
+		</div>
 	</div>
 
 	<div id="content">
@@ -24,7 +29,7 @@
 			<input type="hidden" value="delete" name="action">
 			<input type="hidden" value="{{ stream.key }}" name="tsid">
 			{{ stream.twitteruser }}
-			<button class="button" style="display:inline;float:none" type="submit"><img src="/static/images/tick.png" alt="Delete" /> Delete</button>
+			<button class="button" style="display:inline;float:none" type="submit"><img src="/static/images/cross.png" alt="Delete" /> Delete</button>
 		</form>
 		{% endfor %}
 		<br />		<br />
