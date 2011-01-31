@@ -473,34 +473,36 @@ class Exporter(webapp.RequestHandler):
         logging.debug('found user')
 
         tsid = self.request.get('tsid') and self.request.get('tsid') or None
-        order = self.request.get('order') and self.request.get('order') or '-created'
-
         tweetstream = get_tweetstream(self.request.get('tsid'))
 
-        if not tweetstream:
+        flash.msg = "Your export request has been queued.  You should receive an email with "+tweetstream.twitteruser+"s tweets shortly."
 
+        if not tweetstream:
             flash.msg = "Could not find tweetstream."
             redir = "/tweets"
-            if tsid: redir += "&tsid="+tsid
+            if tsid: redir += "?tsid="+tsid
             self.redirect(redir)
+            return
 
-        else:
+        logging.debug('found tweetstream, enqueuing')
+        taskqueue.add(url = "/export", 
+            name = "ExportTweets-"+tweetstream.twitteruser+"-"+str(int(time.time())),
+            countdown = TWITTER_CALL_DELAY,
+            params = {
+                'tsid': tweetstream.key()
+                },
+            )
 
-            logging.debug('found tweetstream, enqueuing')
-            taskqueue.add(url = "/export", 
-                name = "ExportTweets-"+tweetstream.twitteruser+"-"+str(int(time.time())),
-                countdown = TWITTER_CALL_DELAY,
-                params = {
-                    'tsid': tweetstream.key()
-                    },
-                )
+        logging.debug('Added export all tweets task to the default queue')
 
-            logging.debug('Added export all tweets task to the default queue')
-            flash.msg = "Your export request has been queued.  You should receive an email with ", tweetstream.twitteruser,"s tweets shortly."
-            self.redirect("/tweets")
+        redir = "/tweets"
+        if tsid: redir += "?tsid="+tsid
+        
+        logging.debug("---"+str(flash.msg)+"---")
+        self.redirect(redir)
 
     def post(self):
-        logging.debug("Start exporter... entering webhook")
+        logging.debug("Start exporter...")
         
         tsid = self.request.get('tsid')
 
@@ -514,17 +516,13 @@ class Exporter(webapp.RequestHandler):
             # File like object to gather the exported data
             out = cStringIO.StringIO() 
             export = csv.writer(out, dialect = 'excel')
+            filename = tweetstream.twitteruser+"-"+str(int(time.time()))+".csv"
 
             tweets = Tweet.all(
                 ).filter('tweetstream =', tweetstream
                 ).order('-created')
-            
-            # now we have all tweets, go through and add each one to
-            # the csv file
-            
-            data = ([x.created, x.content] for x in tweets)
+            data = ([x.created, x.content.encode('utf-8') ] for x in tweets)
             export.writerows(data)
-            logging.debug('Done exporting, sending email')
 
             # send email to the owner of the tweetstream with the exported data
             # attached
@@ -533,16 +531,14 @@ class Exporter(webapp.RequestHandler):
                 to = str(tweetstream.owner.email()), 
                 subject = 'Twitter archive from Tweetbak', 
                 body = 'Your twitter archive is attached',
-                attachments=[('twitterexport.csv', out.getvalue())]
+                attachments=[(filename, out.getvalue())]
                 ) 
 
         else:
 
-            # tweetstream not found
             logging.debug("Could not get tweetstream for ", self.request.get('tsid'))
-            
 
-        logging.debug("Done exporter... exiting webhook")
+        logging.debug("Done exporter...")
         
 # -- The main GAE application and routes ---------------------------------
 application = webapp.WSGIApplication([

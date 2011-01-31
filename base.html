@@ -16,8 +16,8 @@
 		<h2>Your twitter, backed up</h2>
 		<div class="utility">
 			{% block headercontent %}
-		    <a class="update" href="/refresh?tsid={{tsid}}">Update now</a>&nbsp;|&nbsp;
-			<a class="export" href="/export">Export</a>&nbsp;|&nbsp;
+		    <a class="update" href="/refresh?tsid={{ tsid }}">Update now</a>&nbsp;|&nbsp;
+			<a class="export" href="/export?tsid={{ tsid }}">Export</a>&nbsp;|&nbsp;
 		    <a class="configure" href="/configure">Configure</a>&nbsp;|&nbsp;
 		    <a class="logout" href="{{ url }}">Logout {{ user.email }}</a><br><br>
 				<form action="/tweets" method="get" style="display:inline">
