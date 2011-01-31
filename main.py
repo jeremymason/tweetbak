@@ -7,19 +7,19 @@ than that.
 """
 
 # -- Imports -------------------------------------------------------------
-import cgi
+import csv
+import cStringIO
 import datetime
 import logging
 from math import ceil
-import os
 import time
 import twitter
-import pickle
 
 import simplejson as json
 from appengine_utilities import sessions
 from appengine_utilities.flash import Flash
 
+from google.appengine.api import mail
 from google.appengine.api import taskqueue
 from google.appengine.api import users
 from google.appengine.ext import db
@@ -34,7 +34,7 @@ from localsettings import *
 # -- Globals -------------------------------------------------------------
 session = sessions.Session()
 MAX_TWEETS_PER_PAGE = 200
-TWITTER_CALL_DELAY = 15
+TWITTER_CALL_DELAY = 1
 
 # -- Models --------------------------------------------------------------
 class TweetStream(db.Model):
@@ -42,20 +42,21 @@ class TweetStream(db.Model):
 
     twitterid = db.IntegerProperty()
     twitteruser = db.StringProperty()
-    twitterresponse = db.TextProperty()
-    count = db.IntegerProperty(default=0)
-    lastupdated = db.DateTimeProperty(auto_now_add=True)
-    owner = db.UserProperty(required=True)
+    raw = db.TextProperty()
+    count = db.IntegerProperty(default = 0)
+    lastupdated = db.DateTimeProperty(auto_now_add = True)
+    owner = db.UserProperty(required = True)
 
 
 class Tweet(search.SearchableModel):
     """Represents one tweet"""
     
-    tweetstream = db.ReferenceProperty(TweetStream, required=True)
+    tweetstream = db.ReferenceProperty(TweetStream, required = True)
     tweetid = db.StringProperty()
-    content = db.StringProperty(multiline=True)
+    content = db.StringProperty(multiline = True)
+    raw = db.TextProperty()
     created = db.DateTimeProperty()
-    owner = db.UserProperty(required=True)
+    owner = db.UserProperty(required = True)
     
 
 # -- Controllers ---------------------------------------------------------
@@ -99,14 +100,13 @@ class Tweets(webapp.RequestHandler):
             return
 
         tsid = tweetstream.key()
-        tweetcount = 0
-        archivecount = "none"
+        tweetcount = "no"
         twitteruser = ""
         lastupdated = ""
         tweets = []
 
         if tweetstream:
-            tweetcount = tweetstream.count
+            tscount = tweetstream.count
             twitteruser = tweetstream.twitteruser
             lastupdated = tweetstream.lastupdated
             tweets = Tweet.all(
@@ -114,19 +114,16 @@ class Tweets(webapp.RequestHandler):
                 ).filter('owner =', user
                 ).order(order
                 ).fetch(limit, offset)
-            archivecount = Tweet.all(
+            tweetcount = Tweet.all(
                 ).filter('tweetstream =', tweetstream
                 ).filter('owner =', user
-                ).order(order
                 ).count()
-            if not archivecount:
-                archivecount = "none"
         
         kwargs = {
             'twitteruser': twitteruser,
             'twitterstreams': TweetStream.all().filter("owner =", user),
             'tweetcount':tweetcount,
-            'archivecount':archivecount,
+            'tscount':tscount,
             'tweets': tweets,
             'tsid': tsid,
             'start': offset+1,
@@ -179,7 +176,7 @@ class Refresh(webapp.RequestHandler):
                 params = {
                     'page': i,
                     'tsid': tweetstream.key()
-                },
+                    },
                 )
             logging.debug('Enqueued get-tweets for page'+str(i)+" start at tweet "+str(MAX_TWEETS_PER_PAGE*i))
 
@@ -222,15 +219,14 @@ class Search(webapp.RequestHandler):
             return
             
         tsid = tweetstream.key()
-        tweetcount = 0
+        tweetcount = "no"
         resultcount = 0
-        archivecount = "none"
         twitteruser = ""
         lastupdated = ""
         tweets = []
 
         if tweetstream:
-            tweetcount = tweetstream.count
+            tscount = tweetstream.count
             twitteruser = tweetstream.twitteruser
             lastupdated = tweetstream.lastupdated
             tweets = Tweet.all(
@@ -245,25 +241,23 @@ class Search(webapp.RequestHandler):
                 ).search(terms
                 ).order(order
                 ).count()
-            archivecount = Tweet.all(
+            tweetcount = Tweet.all(
                 ).filter('tweetstream =', tweetstream
                 ).filter('owner =', user
                 ).order(order
                 ).count()
-            if not archivecount:
-                archivecount = "none"
 
-        results = "".join(["Your search for: ", terms, " returned ", str(resultcount), " results."])
+        s = resultcount != 1 and "s" or ""
+        results = "".join(["Your search for: <b>", terms, "</b> returned ", str(resultcount), " result", s, "."])
         
         kwargs = {
             'twitteruser': twitteruser,
             'twitterstreams': TweetStream.all().filter("owner =", user),
-            'tweetcount':tweetcount,
-            'archivecount':archivecount,
+            'tweetcount':resultcount,
+            'tscount':tscount,
             'tweets': tweets,
             'tsid': tsid,
-            'start': offset+1,
-            'i':1,
+            'start': tweets and offset+1 or 0,
             'end': (offset+limit < resultcount) and offset+limit or resultcount,
             'prevpage': (page-1 > 0) and (page-1) or None,
             'nextpage': (((page+1)*limit) < resultcount+limit) and (page+1) or None,
@@ -273,13 +267,11 @@ class Search(webapp.RequestHandler):
             'request': self.request,
             'flash': Flash(),
             'results': results,
-            'resultcount':resultcount,
             'lastupdated': lastupdated,
             'year': datetime.datetime.now().year
             }
 
-        self.response.out.write(
-            template.render('search.html', kwargs))
+        self.response.out.write(template.render('index.html', kwargs))
 
 
 class Configure(webapp.RequestHandler):
@@ -290,7 +282,7 @@ class Configure(webapp.RequestHandler):
         if not user: 
             self.redirect("/")
 
-        tweetstreams = [x for x in TweetStream.all().filter('owner =', user)]
+        tweetstreams = (x for x in TweetStream.all().filter('owner =', user))
 
         kwargs = {
             'user': user,
@@ -319,7 +311,9 @@ class Configure(webapp.RequestHandler):
 
         elif self.request.get("action") == "add":
             twitteruser = self.request.get("twitteruser")
-            new_tweetstream(twitteruser = twitteruser)
+            tweetstream = new_tweetstream(twitteruser = twitteruser)
+            self.redirect("/tweets?tsid="+tweetstream.key())
+            return
 
         flash = Flash()
         flash.msg = "Tweetbak configuration updated"
@@ -354,7 +348,7 @@ def new_tweetstream(twitteruser = ""):
     if TweetStream.all().filter('owner =', user).filter('twitteruser =', twitteruser).count() < 1:
         tweetstream = TweetStream(owner = user, twitteruser = twitteruser)
         tweetstream.twitterid = status.user.id
-        tweetstream.twitterresponse = str(status)
+        tweetstream.raw = str(status)
         tweetstream.count = status.user.statuses_count
         tweetstream.put()
     else:
@@ -380,6 +374,7 @@ def get_tweetstream(tsid = None):
         tweetstream = TweetStream.all().filter('owner =', user).fetch(1)
         if len(tweetstream) > 0:
             tweetstream = tweetstream[0]
+
     else:
         tweetstream = None
 
@@ -397,7 +392,9 @@ class Retreiver(webapp.RequestHandler):
         tweetstream = TweetStream.get(self.request.get("tsid"))
         if not tweetstream: return
 
-        logging.debug("Getting tweets for "+tweetstream.twitteruser)
+        twitteruser = tweetstream.twitteruser
+        
+        logging.debug("Getting tweets for "+twitteruser)
 
         # fail if the page is not supplied
         if not self.request.get("page"): return
@@ -407,9 +404,21 @@ class Retreiver(webapp.RequestHandler):
 
         logging.debug("Got API ")
 
+        # Update the tweetstream statistics
+        statuses = api.GetUserTimeline(twitteruser, count = 1)
+        status = statuses[0]
+        if not status:
+            logging.debug("Error getting tweets for "+twitteruser)
+            return
+
+        # update the vaules and save them
+        tweetstream.raw = str(status)
+        tweetstream.count = status.user.statuses_count
+        tweetstream.put()
+
         # Get a couple hundred tweets
         statuses = api.GetUserTimeline(
-            tweetstream.twitteruser, 
+            twitteruser, 
             page = page,
             trim_user = True,
             include_rts = True,
@@ -425,6 +434,7 @@ class Retreiver(webapp.RequestHandler):
                     tweet = Tweet(tweetstream = tweetstream, owner = tweetstream.owner)
                     tweet.tweetid = str(status.id)
                     tweet.content = status.text
+                    tweet.raw = str(status)
                     tweet.created = datetime.datetime.strptime(
                         status.created_at, 
                         '%a %b %d %H:%M:%S +0000 %Y'
@@ -448,6 +458,94 @@ class Deleter(webapp.RequestHandler):
         logging.debug("Done deleter... exiting webhook")
 
         
+class Exporter(webapp.RequestHandler):
+    """Send the exported tweet list to your gmail acct"""
+
+    def get(self):
+
+        flash = Flash()
+        user = users.get_current_user()
+
+        if not user: 
+            self.redirect("/")
+            return
+
+        logging.debug('found user')
+
+        tsid = self.request.get('tsid') and self.request.get('tsid') or None
+        order = self.request.get('order') and self.request.get('order') or '-created'
+
+        tweetstream = get_tweetstream(self.request.get('tsid'))
+
+        if not tweetstream:
+
+            flash.msg = "Could not find tweetstream."
+            redir = "/tweets"
+            if tsid: redir += "&tsid="+tsid
+            self.redirect(redir)
+
+        else:
+
+            logging.debug('found tweetstream, enqueuing')
+            taskqueue.add(url = "/export", 
+                name = "ExportTweets-"+tweetstream.twitteruser+"-"+str(int(time.time())),
+                countdown = TWITTER_CALL_DELAY,
+                params = {
+                    'tsid': tweetstream.key()
+                    },
+                )
+
+            logging.debug('Added export all tweets task to the default queue')
+            flash.msg = "Your export request has been queued.  You should receive an email with ", tweetstream.twitteruser,"s tweets shortly."
+            self.redirect("/tweets")
+
+    def post(self):
+        logging.debug("Start exporter... entering webhook")
+        
+        tsid = self.request.get('tsid')
+
+        if tsid:
+            tweetstream = TweetStream.get(tsid)
+
+        if tweetstream:
+
+            logging.debug('Exporting tweets for ', tweetstream.twitteruser)
+
+            # File like object to gather the exported data
+            out = cStringIO.StringIO() 
+            export = csv.writer(out, dialect = 'excel')
+
+            tweets = Tweet.all(
+                ).filter('tweetstream =', tweetstream
+                ).order('-created')
+            
+            # now we have all tweets, go through and add each one to
+            # the csv file
+            
+            data = ([x.created, x.content] for x in tweets)
+            export.writerows(data)
+            logging.debug('Done exporting, sending email')
+
+#            for tweet in tweets:
+#                export.writerow([tweet.data, tweet.content]) 
+
+            # send email to the owner of the tweetstream with the exported data
+            # attached
+            mail.send_mail(
+                sender = 'jeremycmason@gmail.com', 
+                to = str(tweetstream.owner.email), 
+                subject = 'Twitter archive from Tweetbak', 
+                body = 'Your twitter archive is attached',
+                attachments=[('twitterexport.csv', out.getvalue())]
+                ) 
+
+        else:
+
+            # tweetstream not found
+            logging.debug("Could not get tweetstream for ", self.request.get('tsid'))
+            
+
+        logging.debug("Done exporter... exiting webhook")
         
 # -- The main GAE application and routes ---------------------------------
 application = webapp.WSGIApplication([
@@ -456,6 +554,7 @@ application = webapp.WSGIApplication([
     ('/search', Search),
     ('/refresh', Refresh),
     ('/configure', Configure),
+    ('/export', Exporter),
     ('/tweetretreiver', Retreiver),
     ('/tweetdeleter', Deleter),
     ], debug=True)

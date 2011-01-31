@@ -6,7 +6,7 @@
 	margin:0;
 }
 body {
-	font-family:Georgia, "Times New Roman", Times, serif;
+	font-family:Helvetica;
 	font-size:1.0em;
 	background-color:#fff;
 	margin:0 auto;
@@ -21,9 +21,9 @@ div#header {
     color: #3687C9;
 	padding: 0 10px;
 }
-div#page {
+div#content {
     min-height: 250px;
-    padding: 0;
+    padding: 10px;
 }
 
 h1 {
@@ -40,8 +40,9 @@ h2 {
 }
 
 h3 {
-	font-size:1.4em;
-	font-weight:normal;
+	font-size:1.2em;
+	font-weight:bold;
+	margin-top:20px;
 }
 
 a {
@@ -87,39 +88,23 @@ a.button:link, a.button:visited, a.button:hover, a.button:active, button.button 
   color: #222;
   display:block;
   float:left;
-  margin:0 1px 0 0;
+  margin: 2px 2px 2px 2px;
   background-color: #eee;
   border:1px solid #bfbfbf;
   font-size: 0.8em;
   line-height: 1.0em;
   font-weight:bold;
   cursor:pointer;
-  padding:2px 5px 2px 5px;
   text-decoration: none;
+  line-height:18px;
+  padding: 2px 2px 2px 20px;
 }
 
 button.button {
   width:auto;
   overflow:visible;
-  padding:1px 3px; /* IE6 */
   float: none;
   display: inline;
-}
-button.button[type] {
-  padding:1px 3px; /* Firefox */
-  line-height:17px; /* Safari */
-}
-
-*:first-child+html button.button[type] {
-  padding:2px 5px; /* IE7 */
-}
-
-button.button img, a.button img {
-  margin:0 3px -3px 0 !important;
-  padding:0;
-  border:none;
-  width:16px;
-  height:16px;
 }
 
 button.button:hover, a.button:hover {
@@ -140,19 +125,25 @@ nav a {
 }
 
 section article {
-    border-bottom: dashed 1px #f9f9f9;
+    display:block;
+    margin: 0px 0 15px 5px;
+    border-bottom: dashed 1px #f1f1f1;
 }
 section article p {
-    display:inline;
+    display: inline;
     margin-top: 5px;
     margin-left: 5px;
 	color: #000;
 	font-size:1.1em;
 }
 section article span{
-    display:block;
-	font-size:75%;
+    display: block;
+	font-size: 75%;
 	color: #8e8e8e;
+}
+section article span a{
+	color: #8e8e8e;
+	text-decoration: none;
 }
 
 nav#stream {
@@ -176,23 +167,40 @@ div.utility {
     text-align: right;
 }
 
-a.img {
+
+.add {
+    padding-left: 20px;
+    background: url(/static/images/tick.png) 2px 50% no-repeat;
+}
+.delete {
+    padding-left: 20px;
+    background: url(/static/images/cross.png) 2px 50% no-repeat;
+}
+.export {
     padding-left: 18px;
+    background: url(/static/images/email_go.png) 0 50% no-repeat;
 }
-a.export {
-    background-image: url(/static/images/email_go.png);
-    background-repeat: no-repeat;
+.configure {
+    padding-left: 18px;
+    background: url(/static/images/bricks.png) 0 50% no-repeat;
 }
-a.configure {
-    background-image: url(/static/images/bricks.png);
-    background-repeat: no-repeat;
+.logout {
+    padding-left: 18px;
+    background: url(/static/images/exclamation.png) 0 50% no-repeat;
 }
-a.logout {
-    background-image: url(/static/images/exclamation.png);
-    background-repeat: no-repeat;
+.update {
+    padding-left: 18px;
+    background: url(/static/images/arrow_refresh.png) 0 50% no-repeat;
 }
-a.update {
-    background-image: url(/static/images/arrow_refresh.png);
-    background-repeat: no-repeat;
-    border: none;
+.search {
+    padding-left: 18px;
+    background: url(/static/images/magnifier.png) 0 50% no-repeat;
+}
+.flash-msg {
+    border: solid 1px #8e8e8e;
+    color: #910000;
+    font-size: 1.5em;
+    font-weight: bold;
+    margin: 25px 0;
+    padding: 10px 10px;
 }

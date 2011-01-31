@@ -1,70 +1,24 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
-	<title>Tweetbak</title>
-	<link rel="stylesheet" href="/static/css/style.css" type="text/css" />
-	<script type="application/javascript" src="/static/js/jquery-1.4.4.min.js"></script>
-	<script type="application/javascript" src="/static/js/script.js"></script>
-</head>
-<body>
-<div id="wrap">
-	<div id="header">
-		<h1><a href="/">Tweetbak</a></h1>
-		<h2>Your twitter, backed up</h2>
-		<div class="utility">
-		    <a class="img update" href="/refresh?tsid={{tsid}}">Update now</a>&nbsp;|&nbsp;
-			<a class="img export" href="/export">Export</a>&nbsp;|&nbsp;
-		    <a class="img configure" href="/configure">Configure</a>&nbsp;|&nbsp;
-		    <a class="img logout" href="{{ url }}">Logout {{ user.email }}</a><br><br>
-				<form action="/tweets" method="get" style="display:inline">
-					Viewing tweet stream for: <select name="tsid" onchange="submit()">
-					{% for ts in twitterstreams %}
-					<option {% ifequal ts.key tsid %}selected="selected"{% endifequal %} value="{{ ts.key }}">{{ ts.twitteruser }}
-					{% endfor %}
-					</select>
-				</form>
-			({{ archivecount }} tweets archived)<br>
-			Last updated {{ lastupdated|date:"M dS, Y" }}.
-		</div>
-	</div>
+{% extends "base.html" %}
 
-	<div id="content">
-		<div id="page">
-			{% if flash.msg %}
-	            <div class="flash-msg">{{ flash.msg }}</div>
-	        {% endif %}
-	
-			<form action="/search" method="get" style="float:none; padding-left: 5px">
-				<input type="hidden" name="tsid" value="{{ tsid }}">
-				<input type="text" name="term" value="">
-			    <button class="button" type="submit"><img src="/static/images/magnifier.png" alt="Search"> Search</button>
-			</form><br>
+{% block title %}Tweets{% endblock %}
 
-			<section>
-				{% for tweet in tweets %}
-				<article><span>At {{ tweet.created }}</span><p>{{ tweet.content }}</p></article>
-				{% endfor %}
-				{% ifequal len(tweets) 0 %}
-				<article>Your twitter stream is being archived. Please try again later</article>
-				{% endifequal %}
-			</section>
+{% block content %}
+	{% if results %}
+		{{ results }}<a style="font-size: 75%;display:block;text-decoration:none;" href="/tweets">&laquo; back to full archive</a><br><br>
+	{% endif %}
 
+	<section>
+		{% for tweet in tweets %}
+		<article><span><a href="http://www.twitter.com/{{ tweet.tweetstream.twitteruser }}/status/{{ tweet.tweetid }}">{{ tweet.created|date:"D b d h:iA" }}</a></span>{{ forloop.counter }} {{ tweet.content }}</article>
+		{% endfor %}
+		{% if not tweets %}
+		<article>Your twitter stream is being archived. Please try again later</article>
+		{% endifequal %}
+	</section>
 
-			<nav>
-				{% if prevpage %}<a href="/tweets?page={{ prevpage }}&limit={{ limit }}&tsid={{ tsid }}">&laquo; Prev</a>{% endif %}
-				Tweets {{ start }} - {{ end }} of {{ tweetcount }}
-				{% if nextpage %}<a href="/tweets?page={{ nextpage }}&limit={{ limit }}&tsid={{ tsid }}">Next &raquo;</a>{% endif %}
-			</nav>
-
-		</div>
-
-	</div>
-	
-	<div id="footer">
-		<p>&copy; {{ year }} Tweetbak</p>
-	</div>
-</div>
-
-</body>
-</html>
+	<nav>
+		{% if prevpage %}<a href="/tweets?page={{ prevpage }}&limit={{ limit }}&tsid={{ tsid }}">&laquo; Prev</a>{% endif %}
+		Tweets <b>{{ start }} - {{ end }}</b> of <b>{{ tweetcount }}</b>
+		{% if nextpage %}<a href="/tweets?page={{ nextpage }}&limit={{ limit }}&tsid={{ tsid }}">Next &raquo;</a>{% endif %}
+	</nav>
+{% endblock %}

@@ -1,51 +1,25 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
-	<title>Tweetbak</title>
-	<link rel="stylesheet" href="/static/css/style.css" type="text/css" />
-	<script type="application/javascript" src="/static/js/jquery-1.4.4.min.js"></script>
-	<script type="application/javascript" src="/static/js/script.js"></script>
-</head>
-<body>
-<div id="wrap">
-	<div id="header">
-		<h1><a href="/">Tweetbak</a></h1>
-		<h2>Your twitter, backed up</h2>
-		<div class="utility">
-			<a href="/export"><img src="/static/images/email_go.png" alt="Export"> Export</a>&nbsp;|&nbsp;
-		    <a href="/configure"><img src="/static/images/bricks.png" alt="Configure"> Configure</a>&nbsp;|&nbsp;
-		    <a href="{{ url }}"><img src="/static/images/exclamation.png" alt="Logout"> Logout {{ user.email }}</a><br>
-			{{ tweetcount }} tweet{{ tweets|pluralize }} for <em>{{ twitteruser }}</em> archived. 
-			Last updated {{ lastupdated|date:"M dS, Y" }}.
-		</div>
-	</div>
+{% extends "base.html" %}
 
-	<div id="content">
-		Twitter usernames to archive:
+{% block title %}Configuration{% endblock %}
+
+{% block headercontent %}
+<a class="logout" href="{{ url }}">Logout {{ user.email }}</a><br><br>
+{% endblock %}
+
+{% block content %}
+	<h3>New twitter username to archive:</h3>
+	<form action="/configure" method="post" style="display:inline">
+		<input type="hidden" value="add" name="action">
+		<input type="text" size="25" value="" name="twitteruser">
+		<button class="button add" type="submit">Add</button>
+	</form>
+
+	<h3>Twitter accounts currently being archived:</h3>
+	<form action="/configure" method="post">
+		<input type="hidden" value="delete" name="action">
 		{% for stream in tweetstreams %}
-		<br />
-		<form action="/configure" method="post" style="display:inline" >
-			<input type="hidden" value="delete" name="action">
-			<input type="hidden" value="{{ stream.key }}" name="tsid">
-			{{ stream.twitteruser }}
-			<button class="button" style="display:inline;float:none" type="submit"><img src="/static/images/cross.png" alt="Delete" /> Delete</button>
-		</form>
+		<button class="button delete" name="tsid" value="{{ stream.key }}" type="submit">Stop archiving</button>
+		<a href="/tweets?tsid={{ stream.key }}"><b>{{ stream.twitteruser|capfirst }}</b></a><br>
 		{% endfor %}
-		<br />		<br />
-		New twitter username to archive:
-		<form action="/configure" method="post" style="display:inline" >
-			<input type="hidden" value="add" name="action">
-			<input style="display:inline" type="text" size="25" value="" name="twitteruser">
-			<button  class="button" style="display:inline;float:none" type="submit"><img src="/static/images/tick.png" alt="Delete" /> Add</button>
-		</form>
-		<div class="clear"></div>
-	</div>
-	
-	<div id="footer">
-		<p>&copy; {{ year }} tweetbak</p>
-	</div>
-</div>
-
-</body>
-</html>
+	</form>
+{% endblock %}
