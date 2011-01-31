@@ -475,7 +475,7 @@ class Exporter(webapp.RequestHandler):
         tsid = self.request.get('tsid') and self.request.get('tsid') or None
         tweetstream = get_tweetstream(self.request.get('tsid'))
 
-        flash.msg = "Your export request has been queued.  You should receive an email with "+tweetstream.twitteruser+"s tweets shortly."
+        flash.msg = "Your export request has been queued.  You should receive an email with "+tweetstream.twitteruser+"'s tweets shortly."
 
         if not tweetstream:
             flash.msg = "Could not find tweetstream."
