@@ -9,11 +9,11 @@
 
 	<section>
 		{% for tweet in tweets %}
-		<article><span><a href="http://www.twitter.com/{{ tweet.tweetstream.twitteruser }}/status/{{ tweet.tweetid }}">{{ tweet.created|date:"D b d h:iA" }}</a></span>{{ forloop.counter }} {{ tweet.content }}</article>
+		<article><span><a href="http://www.twitter.com/{{ tweet.tweetstream.twitteruser }}/status/{{ tweet.tweetid }}">{{ tweet.created|date:"D b d h:iA" }}</a></span>{{ tweet.content }}</article>
 		{% endfor %}
 		{% if not tweets %}
 		<article>Your twitter stream is being archived. Please try again later</article>
-		{% endifequal %}
+		{% endif %}
 	</section>
 
 	<nav>

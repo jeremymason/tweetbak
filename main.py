@@ -312,7 +312,7 @@ class Configure(webapp.RequestHandler):
         elif self.request.get("action") == "add":
             twitteruser = self.request.get("twitteruser")
             tweetstream = new_tweetstream(twitteruser = twitteruser)
-            self.redirect("/tweets?tsid="+tweetstream.key())
+            self.redirect("/refresh?tsid="+str(tweetstream.key()))
             return
 
         flash = Flash()
@@ -526,14 +526,11 @@ class Exporter(webapp.RequestHandler):
             export.writerows(data)
             logging.debug('Done exporting, sending email')
 
-#            for tweet in tweets:
-#                export.writerow([tweet.data, tweet.content]) 
-
             # send email to the owner of the tweetstream with the exported data
             # attached
             mail.send_mail(
                 sender = 'jeremycmason@gmail.com', 
-                to = str(tweetstream.owner.email), 
+                to = str(tweetstream.owner.email()), 
                 subject = 'Twitter archive from Tweetbak', 
                 body = 'Your twitter archive is attached',
                 attachments=[('twitterexport.csv', out.getvalue())]
