@@ -1,0 +1,4 @@
+cron:
+- description: refresh tweetstream job
+  url: /tasks/refresh
+  schedule: every 55 minutes synchronized

@@ -1,0 +1,5 @@
+queue:
+- name: default
+  rate: 1/m
+- name: get-tweets
+  rate: 6/m

@@ -11,6 +11,9 @@ handlers:
 - url: .*
   script: main.py
 
+- url: /tasks/refresh
+  script: main.py
+  login: admin
 
 builtins:
 - datastore_admin: on

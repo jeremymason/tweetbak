@@ -9,17 +9,21 @@
 
 	<section>
 		{% for tweet in tweets %}
-		<article><span><a href="http://www.twitter.com/{{ tweet.tweetstream.twitteruser }}/status/{{ tweet.tweetid }}">{{ tweet.created|date:"D b d h:iA" }}</a></span>{{ tweet.content }}</article>
+		<article><span><a href="http://www.twitter.com/{{ tweet.tweetstream.twitteruser }}/status/{{ tweet.tweetid }}">{{ tweet.created|date:"D b d h:iA" }}</a></span>{{ tweet.content|striptags|urlize|linebreaks }}</article>
 		{% endfor %}
-		{% if not tweets %}
-		<article>Your twitter stream is being archived. Please try again later</article>
+		{% if not tweets and not results %}
+		<article>
+			Your twitter stream is currently being archived.
+			It should be ready shortly - this page will refresh automatically or you can <a href="/tweets?tsid={{ tsid }}">try again now</a>
+			<script>window.setTimeout('location.reload()', 2000);</script>
+		</article>
 		{% endif %}
 	</section>
 
 	{% if tweets %}
 	<nav>
 		{% if prevpage %}<a href="/tweets?page={{ prevpage }}&limit={{ limit }}&tsid={{ tsid }}">&laquo; Prev</a>{% endif %}
-		Tweets <b>{{ start }} - {{ end }}</b> of <b>{{ tscount }}</b>
+		Tweets <b>{{ start }} - {{ end }}</b> of <b>{{ tweetcount }}</b>
 		{% if nextpage %}<a href="/tweets?page={{ nextpage }}&limit={{ limit }}&tsid={{ tsid }}">Next &raquo;</a>{% endif %}
 	</nav>
 	{% endif %}
