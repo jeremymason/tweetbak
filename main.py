@@ -280,7 +280,7 @@ class RefreshAll(webapp.RequestHandler):
 
     def get(self):
 
-        for tweetstream in Tweetstreams.all():
+        for tweetstream in Tweetstream.all():
             
             # get the latest 200 tweets and archive them
             taskqueue.add(url = "/tweetretreiver", 
