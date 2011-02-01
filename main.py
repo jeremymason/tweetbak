@@ -6,12 +6,18 @@ only archives up to 3200 historical tweets(!). Use this to go back further
 than that.
 """
 
+
+
+
+
+
 # -- Imports -------------------------------------------------------------
 import csv
 import cStringIO
 import datetime
 import logging
 from math import ceil
+import random
 import time
 import twitter
 
@@ -20,6 +26,7 @@ from appengine_utilities import sessions
 from appengine_utilities.flash import Flash
 
 from google.appengine.api import mail
+from google.appengine.api import memcache
 from google.appengine.api import taskqueue
 from google.appengine.api import users
 from google.appengine.ext import db
@@ -35,6 +42,55 @@ from localsettings import *
 session = sessions.Session()
 MAX_TWEETS_PER_PAGE = 200
 TWITTER_CALL_DELAY = 1
+
+
+# -- http://code.google.com/appengine/articles/sharding_counters.html ----
+class GeneralCounterShardConfig(db.Model):
+    """Tracks the number of shards for each named counter."""
+    name = db.StringProperty(required=True)
+    num_shards = db.IntegerProperty(required=True, default=20)
+
+
+class GeneralCounterShard(db.Model):
+    """Shards for each named counter"""
+    name = db.StringProperty(required=True)
+    count = db.IntegerProperty(required=True, default=0)
+
+
+def get_count(name):
+    """Retrieve the value for a given sharded counter.
+
+    Parameters:
+      name - The name of the counter
+    """
+    total = memcache.get(name)
+    if total is None:
+        total = 0
+        for counter in GeneralCounterShard.all().filter('name = ', name):
+            total += counter.count
+        memcache.add(name, str(total), 60)
+    return total
+
+
+def increment(name):
+    """Increment the value for a given sharded counter.
+
+    Parameters:
+      name - The name of the counter
+    """
+    config = GeneralCounterShardConfig.get_or_insert(name, name=name)
+    def txn():
+        index = random.randint(0, config.num_shards - 1)
+        shard_name = name + str(index)
+        counter = GeneralCounterShard.get_by_key_name(shard_name)
+        if counter is None:
+            counter = GeneralCounterShard(key_name=shard_name, name=name)
+        counter.count += 1
+        counter.put()
+    db.run_in_transaction(txn)
+    memcache.incr(name)
+# -- http://code.google.com/appengine/articles/sharding_counters.html ----
+
 
 # -- Models --------------------------------------------------------------
 class TweetStream(db.Model):
@@ -57,7 +113,11 @@ class Tweet(search.SearchableModel):
     raw = db.TextProperty()
     created = db.DateTimeProperty()
     owner = db.UserProperty(required = True)
-    
+
+    @classmethod
+    def SearchableProperties(cls):
+        return [['content']]    
+
 
 # -- Controllers ---------------------------------------------------------
 class Welcome(webapp.RequestHandler):
@@ -114,10 +174,9 @@ class Tweets(webapp.RequestHandler):
                 ).filter('owner =', user
                 ).order(order
                 ).fetch(limit, offset)
-            tweetcount = Tweet.all(
-                ).filter('tweetstream =', tweetstream
-                ).filter('owner =', user
-                ).count()
+
+            countername = str(tweetstream.owner)+"-"+str(tweetstream.twitterid)+"-"
+            tweetcount = int(get_count(countername))
         
         kwargs = {
             'twitteruser': twitteruser,
@@ -302,12 +361,18 @@ class Configure(webapp.RequestHandler):
             self.redirect("/")
 
         if self.request.get("action") == "delete":
-            # Delete all existing backedup tweets
+
+            # Delete all existing archived tweets and associated support classes
             tweetstream = TweetStream.get(self.request.get("tsid"))
-            tweets = Tweet.all().filter("tweetstream=",tweetstream).filter("owner=", user)
-            for tweet in tweets:
-                tweet.delete()
-            tweetstream.delete()
+
+            taskqueue.add(
+                url = "/tweetdeleter", 
+                name = "DeleteAllTweets-"+tweetstream+"-"+str(int(time.time())),
+                params = {
+                    'user': user.user_id(),
+                    'tsid': tweetstream
+                    }
+                )
 
         elif self.request.get("action") == "add":
             twitteruser = self.request.get("twitteruser")
@@ -327,8 +392,6 @@ def new_tweetstream(twitteruser = ""):
     if not user: 
         return None
     
-    tweetstream = None
-
     # Create the tweetstream only if it doesn't exist already and we can find the 
     # twitter user
     api = twitter.Api(cache = None)
@@ -345,14 +408,17 @@ def new_tweetstream(twitteruser = ""):
     if not status:
         return None
     
-    if TweetStream.all().filter('owner =', user).filter('twitteruser =', twitteruser).count() < 1:
-        tweetstream = TweetStream(owner = user, twitteruser = twitteruser)
-        tweetstream.twitterid = status.user.id
-        tweetstream.raw = str(status)
-        tweetstream.count = status.user.statuses_count
-        tweetstream.put()
-    else:
-        tweetstream = TweetStream.all().filter('owner =', user).filter('twitteruser =', twitteruser).get()
+    key_name = user.email()+"-"+twitteruser
+
+    tweetstream = TweetStream.get_or_insert(
+        owner = user,
+        twitteruser = twitteruser,
+        key_name = key_name
+        )
+    tweetstream.twitterid = status.user.id
+    tweetstream.raw = str(status)
+    tweetstream.count = status.user.statuses_count
+    tweetstream.put()
 
     return tweetstream
 
@@ -360,7 +426,7 @@ def get_tweetstream(tsid = None):
     """Get a tweetstream object for the current user
     If tsid is a key object for a GAE model
     If tsid is not supplied, use the first found tweetstream
-    If a tweetstream isn't found, create an empty one and return that
+    If a tweetstream isn't found, just return None
     """
     
     user = users.get_current_user()
@@ -428,10 +494,13 @@ class Retreiver(webapp.RequestHandler):
         logging.debug("Got statuses: "+str(len(statuses)))
 
         for status in statuses:
-            # Don't save statuses we have already saved
-            if not Tweet.all().filter("tweetid =", str(status.id)).get():
+
+            # Don't save statuses we've already saved
+            key_name = str(tweetstream.key())+"-"+str(status.id)
+
+            if not Tweet.get_by_key_name(key_name):
                 try:
-                    tweet = Tweet(tweetstream = tweetstream, owner = tweetstream.owner)
+                    tweet = Tweet(tweetstream = tweetstream, owner = tweetstream.owner, key_name = key_name)
                     tweet.tweetid = str(status.id)
                     tweet.content = status.text
                     tweet.raw = str(status)
@@ -440,6 +509,12 @@ class Retreiver(webapp.RequestHandler):
                         '%a %b %d %H:%M:%S +0000 %Y'
                         )
                     tweet.put()
+
+                    # http://code.google.com/appengine/articles/sharding_counters.html
+                    # use a sharded counter instead of .count()
+                    countername = str(tweetstream.owner)+"-"+str(tweetstream.twitterid)+"-"
+                    increment(countername)
+
                 except:
                     logging.debug("Error saving status: "+status.text)
         logging.debug("Done retreiver... exiting webhook")
@@ -447,14 +522,52 @@ class Retreiver(webapp.RequestHandler):
 class Deleter(webapp.RequestHandler):
     
     def get(self):
-        taskqueue.add(url = "/tweetdeleter")
-        logging.debug('Added delete all tweets task to the default queue')
+
+        user = users.get_current_user()
+        if not user: 
+            return None
+        
+        taskqueue.add(
+            url = "/tweetdeleter", 
+            name = "DeleteAllTweets-"+user.user_id()+"-"+str(int(time.time())),
+            params = {
+                'user': user.user_id()
+                }
+            )
+        
+        logging.debug('Enqueued task to delete all tweets')
 
     def post(self):
         logging.debug("Start deleter... entering webhook")
-        tweets = Tweet.all()
-        for t in tweets:
+
+        user = users.get_current_user()
+        if not user or user.user_id() != self.request.get("user"):
+            return None
+
+        tsid = self.request.get("user")
+
+        if tsid:
+            tweetstreams = TweetStream.all().filter("owner =", user).filter("tweetstream =", tsid)
+        else:
+            tweetstreams = TweetStream.all().filter("owner =", user)
+
+        # Remove all tweetstreams indicated for this user (cascade to the sharded counter entities)
+        for t in tweetstreams:
+
+            countername = str(tweetstream.owner)+"-"+str(tweetstream.twitterid)+"-"
+
+            for gcc in GeneralCounterShardConfig.get_by_key_name(countername):
+                gcc.delete()
+
+            for gc in GeneralCounterShard.get_by_key_name(countername):
+                gc.delete()
+
+            # Remove all tweet entries for this user
+            for t in Tweet.all().filter("tweetstream =", t):
+                t.delete()
+
             t.delete()
+
         logging.debug("Done deleter... exiting webhook")
 
         
